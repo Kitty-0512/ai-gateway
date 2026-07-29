@@ -35,5 +35,6 @@ ENV MCP_SERVER_ENABLED=false \
     STATIC_DIR=static \
     FS_SANDBOX_ROOT=/tmp/uploads
 
-EXPOSE 7860
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
+EXPOSE 10000
+# Render 通过 PORT 环境变量动态分配端口（默认 10000），本地运行可自行覆盖
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}"]
