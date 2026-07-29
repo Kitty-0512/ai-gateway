@@ -18,10 +18,11 @@ from __future__ import annotations
 import json
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
@@ -297,10 +298,10 @@ async def delete_session(session_id: str):
     return {"message": "已删除"}
 
 
-# ---- 根路径 & 异常处理 ----
+# ---- 服务信息 & 异常处理 ----
 
-@app.get("/")
-async def root():
+@app.get("/api/info")
+async def service_info():
     return {
         "service": settings.app_name,
         "version": "2.0.0",
@@ -336,3 +337,31 @@ async def value_error_handler(request: Request, exc: ValueError):
 async def general_exception_handler(request: Request, exc: Exception):
     logger.exception(f"服务内部错误 [{request.method} {request.url.path}]")
     return JSONResponse(status_code=500, content={"detail": "服务器内部错误", "code": "INTERNAL_ERROR"})
+
+
+# ---- 前端托管（单服务部署）----
+# 必须注册在所有 API 路由之后，否则通配路由会抢先匹配掉接口请求。
+
+_static_dir = Path(settings.static_dir)
+
+if _static_dir.is_dir():
+    _static_root = _static_dir.resolve()
+    _index_file = _static_root / "index.html"
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_frontend(full_path: str):
+        """命中真实文件则直接返回，否则回退 index.html 交给前端路由处理。"""
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="接口不存在")
+        candidate = (_static_root / full_path).resolve()
+        if full_path and candidate.is_file() and candidate.is_relative_to(_static_root):
+            return FileResponse(candidate)
+        return FileResponse(_index_file)
+
+    logger.info("前端静态资源: 已挂载 %s", _static_root)
+else:
+    @app.get("/")
+    async def root():
+        return await service_info()
+
+    logger.info("前端静态资源: 未找到 %s，仅提供 API", _static_dir)

@@ -15,17 +15,30 @@ from app.core.config import get_settings
 
 _settings = get_settings()
 
+_connect_args: dict = {
+    "connect_timeout": 10,
+    "read_timeout": 30,
+    "write_timeout": 30,
+}
+
+if _settings.mysql_ssl_enabled:
+    # PyMySQL 只要收到非空 ssl 字典就启用 TLS。托管数据库（TiDB Cloud、Aiven 等）
+    # 强制加密连接，未配置时会直接被服务端拒绝。
+    if _settings.mysql_ssl_ca:
+        _ca_path = _settings.mysql_ssl_ca
+    else:
+        import certifi
+
+        _ca_path = certifi.where()
+    _connect_args["ssl"] = {"ca": _ca_path}
+
 engine = create_engine(
     _settings.database_url,
     pool_size=5,
     max_overflow=10,
     pool_pre_ping=True,
     pool_recycle=300,
-    connect_args={
-        "connect_timeout": 10,
-        "read_timeout": 30,
-        "write_timeout": 30,
-    },
+    connect_args=_connect_args,
     echo=False,
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

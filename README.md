@@ -1,3 +1,13 @@
+---
+title: AI 统一分析网关
+emoji: 🔍
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # AI 统一分析网关
 
 面向自然语言数据分析（Text-to-SQL）与运维日志智能诊断的统一 AI Agent 网关。
@@ -97,7 +107,53 @@ npm run dev
 | `OPENAI_BASE_URL` | 接口地址，默认 `https://api.deepseek.com/v1` | 是 |
 | `OPENAI_MODEL` | 模型名，默认 `deepseek-chat` | 是 |
 | `MYSQL_*` | 数据库连接信息，仅 SQL 分析模式需要 | 否 |
+| `MYSQL_SSL_ENABLED` | 连接托管数据库（强制 TLS）时设为 `true` | 否 |
 | `CORS_ORIGINS` | 允许的前端来源，逗号分隔 | 是 |
 | `LLM_FALLBACK_MOCK` | LLM 不可用时是否回退到规则模板 | 否 |
+| `STATIC_DIR` | 前端构建产物目录，存在时由后端一并托管 | 否 |
 
 `.env` 已被 `.gitignore` 排除，不会提交到仓库。
+
+---
+
+## 部署
+
+项目采用**单服务部署**：`Dockerfile` 分两阶段，先用 Node 构建前端，再把产物拷进 Python 镜像的 `static/` 目录，由 FastAPI 一并托管。这样前后端同源，无需处理 CORS，SSE 流式输出也不会被反向代理缓冲。
+
+本地用 Docker 验证：
+
+```bash
+docker build -t ai-gateway .
+docker run -p 7860:7860 -e OPENAI_API_KEY=sk-xxx ai-gateway
+```
+
+打开 `http://localhost:7860` 即可。
+
+### Hugging Face Spaces
+
+1. 在 [huggingface.co/new-space](https://huggingface.co/new-space) 新建 Space，SDK 选 **Docker** → **Blank**。
+2. 把本仓库推送到 Space 的 Git 仓库（README 顶部的 YAML 配置块已写好 `sdk: docker` 和 `app_port: 7860`）：
+
+```bash
+git remote add hf https://huggingface.co/spaces/<用户名>/<Space 名>
+git push hf main
+```
+
+3. 在 Space 的 **Settings → Variables and secrets** 添加 `OPENAI_API_KEY`（以及需要连数据库时的 `MYSQL_*`）。密钥必须加在这里，不要写进仓库。
+
+镜像里没有安装 Node，因此 `Dockerfile` 中已将三个 MCP 工具子进程关闭；SQL 执行会自动降级为 SQLAlchemy 直连，功能不受影响。
+
+### 数据库（仅 SQL 分析模式需要）
+
+日志诊断模式不依赖数据库，可以直接上线。SQL 分析模式需要一个 MySQL 兼容的数据库，[TiDB Cloud Starter](https://tidbcloud.com/) 提供免费额度且无需信用卡。创建集群后在 Space 中配置：
+
+```
+MYSQL_HOST=gateway01.<region>.prod.aws.tidbcloud.com
+MYSQL_PORT=4000
+MYSQL_USER=<前缀>.root
+MYSQL_PASSWORD=<密码>
+MYSQL_DATABASE=ai_analyzer
+MYSQL_SSL_ENABLED=true
+```
+
+TiDB Cloud 强制 TLS 连接，`MYSQL_SSL_ENABLED=true` 必须设置，否则会被服务端直接拒绝。证书默认使用 `certifi` 内置的根证书，无需额外下载；若需指定自定义 CA，用 `MYSQL_SSL_CA` 给出路径。

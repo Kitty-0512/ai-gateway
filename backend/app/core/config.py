@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     mysql_user: str = "analyzer"
     mysql_password: str = ""
     mysql_database: str = "ai_analyzer"
+    # 托管数据库（TiDB Cloud / Aiven / PlanetScale 等）通常强制 TLS
+    mysql_ssl_enabled: bool = False
+    mysql_ssl_ca: str = ""                   # 留空则使用 certifi 内置根证书
+
+    # ---- 前端静态资源 ----
+    # 指向前端构建产物目录；存在时由后端直接托管前端，实现单服务部署
+    static_dir: str = "static"
 
     # ---- MCP Server（SQL 执行 & Schema 发现）----
     mcp_server_enabled: bool = True
