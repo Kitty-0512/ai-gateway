@@ -47,6 +47,43 @@ async def lifespan(app: FastAPI):
     if settings.mysql_host:
         logger.info(f"  MySQL: {settings.mysql_host}:{settings.mysql_port}/{settings.mysql_database}")
 
+    # ── 自动建表（元数据表）──
+    if settings.mysql_host:
+        try:
+            from sqlalchemy import text
+            from app.services.sql.db_utils import get_db_sync
+            db = get_db_sync()
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS datasets (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    file_name VARCHAR(255) NOT NULL,
+                    file_path VARCHAR(500) NOT NULL,
+                    file_size BIGINT NOT NULL DEFAULT 0,
+                    table_name VARCHAR(128) NOT NULL,
+                    schema_json TEXT,
+                    row_count INT NOT NULL DEFAULT 0,
+                    file_type VARCHAR(20) NOT NULL,
+                    uploaded_by INT NOT NULL DEFAULT 1,
+                    status INT NOT NULL DEFAULT 1,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS conversations (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    title VARCHAR(200) NOT NULL DEFAULT '新对话',
+                    user_id INT NOT NULL DEFAULT 1,
+                    dataset_ids TEXT,
+                    status INT NOT NULL DEFAULT 1,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            db.commit()
+            db.close()
+            logger.info("  元数据表: ✅ 已就绪 (datasets, conversations)")
+        except Exception as e:
+            logger.warning("  元数据表: ⚠️ 建表失败 — %s", e)
+
     # ── MCP Server 健康检查 ──
     try:
         from app.core.mcp_client import get_mcp_client
