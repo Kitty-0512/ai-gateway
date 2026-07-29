@@ -1,0 +1,14 @@
+2026-07-28 14:32:01 INFO     app.main - 收到分析请求 session=abc123
+2026-07-28 14:32:02 INFO     app.services.sql - 开始生成 SQL
+2026-07-28 14:32:03 ERROR    app.services.sql - 查询执行失败
+Traceback (most recent call last):
+  File "/app/app/services/sql/sql_executor_utils.py", line 87, in run_query
+    result = conn.execute(text(sql))
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(self, multiparams, params, _EMPTY_EXECUTION_OPTS)
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(self, multiparams, params, execution_options)
+sqlalchemy.exc.ProgrammingError: (pymysql.err.ProgrammingError) (1146, "Table 'analytics.orders_backup' doesn't exist")
+[SQL: SELECT store_name, SUM(amount) FROM orders_backup GROUP BY store_name ORDER BY SUM(amount) DESC LIMIT 10]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-07-28 14:32:03 ERROR    uvicorn.error - Exception in ASGI application

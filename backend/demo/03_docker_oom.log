@@ -1,0 +1,6 @@
+time="2026-07-28T06:41:12Z" level=error msg="container died" container=7f3a9c2b1e04 name=ai-gateway-worker
+time="2026-07-28T06:41:12Z" level=error msg="OCI runtime error: container process killed by OOM killer"
+time="2026-07-28T06:41:12Z" level=warning msg="cgroup memory limit exceeded" container=7f3a9c2b1e04 limit=512MB usage=511MB
+dockerd: time="2026-07-28T06:41:12.884Z" level=error msg="shim disconnected" id=7f3a9c2b1e04 namespace=moby
+dockerd: time="2026-07-28T06:41:12.885Z" level=error msg="stream copy error: reading from a closed fifo"
+Container 7f3a9c2b1e04 exited with code 137 (OOMKilled)

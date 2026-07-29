@@ -1,0 +1,5 @@
+2026/07/28 09:15:44 [error] 28471#28471: *1023 connect() failed (111: Connection refused) while connecting to upstream, client: 10.0.1.88, server: api.example.com, request: "POST /api/chat HTTP/1.1", upstream: "http://127.0.0.1:8000/api/chat", host: "api.example.com"
+2026/07/28 09:15:44 [error] 28471#28471: *1023 upstream prematurely closed connection while reading response header from upstream, client: 10.0.1.88, server: api.example.com, request: "POST /api/chat HTTP/1.1", upstream: "http://127.0.0.1:8000/api/chat", host: "api.example.com"
+10.0.1.88 - - [28/Jul/2026:09:15:44 +0800] "POST /api/chat HTTP/1.1" 502 157 "-" "python-requests/2.31.0"
+2026/07/28 09:16:02 [warn] 28471#28471: *1044 upstream timed out (110: Connection timed out) while reading response header from upstream, client: 10.0.1.92, server: api.example.com, request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8000/api/health", host: "api.example.com"
+10.0.1.92 - - [28/Jul/2026:09:16:02 +0800] "GET /api/health HTTP/1.1" 504 167 "-" "curl/8.5.0"

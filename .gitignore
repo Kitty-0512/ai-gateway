@@ -1,0 +1,46 @@
+# ── 密钥与环境变量 ──
+.env
+.env.local
+.env.*.local
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.so
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# ── Node / 前端 ──
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+yarn-error.log*
+
+# ── 运行时产物 ──
+backend/uploads/*
+!backend/uploads/.gitkeep
+*.log
+!backend/demo/*.log
+*.db
+*.sqlite3
+
+# ── 编辑器 / 系统 ──
+.vscode/
+.idea/
+*.code-workspace
+.DS_Store
+Thumbs.db
+
+# ── 个人文档（简历素材 / 面试准备，不公开）──
+backend/AI 统一分析网关2.md
+backend/AI 统一分析网关3.md
+backend/AI 统一分析网关4.md
+backend/项目名称：AI 统一分析网关.md
+backend/面试问答准备.md
+backend/开源项目借鉴清单.md
