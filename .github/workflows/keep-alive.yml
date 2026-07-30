@@ -1,0 +1,15 @@
+name: Keep Render Alive
+
+on:
+  schedule:
+    # 每 5 分钟 ping 一次
+    - cron: '*/5 * * * *'
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health check
+        run: |
+          curl -sf https://ai-gateway-1qp6.onrender.com/api/health/live
+          echo "✅ Ping done"
