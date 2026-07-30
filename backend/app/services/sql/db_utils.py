@@ -19,6 +19,13 @@ _engine = None
 _SessionLocal = None
 
 
+def __getattr__(name: str):
+    """模块级懒加载：兼容 `from db_utils import engine` 的旧用法。"""
+    if name == "engine":
+        return _get_engine()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 def _get_engine():
     """延迟创建数据库 engine（避免模块导入时就连接数据库）。"""
     global _engine, _SessionLocal
