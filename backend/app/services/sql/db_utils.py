@@ -33,7 +33,7 @@ def _get_engine():
         return _engine
 
     _connect_args: dict = {
-        "connect_timeout": 10,
+        "connect_timeout": 5,
         "read_timeout": 30,
         "write_timeout": 30,
     }

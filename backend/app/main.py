@@ -335,6 +335,14 @@ async def delete_session(session_id: str):
     return {"message": "已删除"}
 
 
+# ---- 存活探针（无依赖，Render 健康检查用）----
+
+@app.get("/api/health/live")
+async def health_live():
+    """存活探针：不依赖 DB / MCP / LLM，只返回 ok。"""
+    return {"status": "ok"}
+
+
 # ---- 服务信息 & 异常处理 ----
 
 @app.get("/api/info")
