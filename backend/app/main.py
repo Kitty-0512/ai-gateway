@@ -78,9 +78,24 @@ async def lifespan(app: FastAPI):
                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
             """))
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS messages (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    conversation_id BIGINT NOT NULL,
+                    role VARCHAR(50) NOT NULL,
+                    content TEXT NOT NULL,
+                    sql_generated TEXT,
+                    sql_result TEXT,
+                    chart_config TEXT,
+                    chart_type VARCHAR(50),
+                    token_usage INT NOT NULL DEFAULT 0,
+                    status INT NOT NULL DEFAULT 1,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
             db.commit()
             db.close()
-            logger.info("  元数据表: ✅ 已就绪 (datasets, conversations)")
+            logger.info("  元数据表: ✅ 已就绪 (datasets, conversations, messages)")
         except Exception as e:
             logger.warning("  元数据表: ⚠️ 建表失败 — %s", e)
 
