@@ -4,6 +4,7 @@ on:
   schedule:
     # 每 5 分钟 ping 一次
     - cron: '*/5 * * * *'
+  workflow_dispatch:
 
 jobs:
   ping:
