@@ -15,38 +15,49 @@ from app.core.config import get_settings
 
 _settings = get_settings()
 
-_connect_args: dict = {
-    "connect_timeout": 10,
-    "read_timeout": 30,
-    "write_timeout": 30,
-}
+_engine = None
+_SessionLocal = None
 
-if _settings.mysql_ssl_enabled:
-    # PyMySQL 只要收到非空 ssl 字典就启用 TLS。托管数据库（TiDB Cloud、Aiven 等）
-    # 强制加密连接，未配置时会直接被服务端拒绝。
-    if _settings.mysql_ssl_ca:
-        _ca_path = _settings.mysql_ssl_ca
-    else:
-        import certifi
 
-        _ca_path = certifi.where()
-    _connect_args["ssl"] = {"ca": _ca_path}
+def _get_engine():
+    """延迟创建数据库 engine（避免模块导入时就连接数据库）。"""
+    global _engine, _SessionLocal
+    if _engine is not None:
+        return _engine
 
-engine = create_engine(
-    _settings.database_url,
-    pool_size=5,
-    max_overflow=10,
-    pool_pre_ping=True,
-    pool_recycle=300,
-    connect_args=_connect_args,
-    echo=False,
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    _connect_args: dict = {
+        "connect_timeout": 10,
+        "read_timeout": 30,
+        "write_timeout": 30,
+    }
+
+    if _settings.mysql_ssl_enabled:
+        if _settings.mysql_ssl_ca:
+            _ca_path = _settings.mysql_ssl_ca
+        else:
+            import certifi
+            _ca_path = certifi.where()
+        _connect_args["ssl"] = {"ca": _ca_path}
+
+    _engine = create_engine(
+        _settings.database_url,
+        pool_size=5,
+        max_overflow=10,
+        pool_pre_ping=True,
+        pool_recycle=300,
+        connect_args=_connect_args,
+        echo=False,
+    )
+    _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
+    return _engine
 
 
 def get_db() -> Session:
     """FastAPI 依赖注入：获取数据库会话"""
-    db = SessionLocal()
+    global _SessionLocal
+    if _SessionLocal is None:
+        _get_engine()
+    db = _SessionLocal()
     try:
         yield db
     finally:
@@ -55,7 +66,10 @@ def get_db() -> Session:
 
 def get_db_sync() -> Session:
     """直接获取数据库会话（非依赖注入场景）"""
-    return SessionLocal()
+    global _SessionLocal
+    if _SessionLocal is None:
+        _get_engine()
+    return _SessionLocal()
 
 
 # ---- SQL 安全校验（纯本地，不涉及数据库连接）----

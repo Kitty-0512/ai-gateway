@@ -48,7 +48,7 @@ async def lifespan(app: FastAPI):
         logger.info(f"  MySQL: {settings.mysql_host}:{settings.mysql_port}/{settings.mysql_database}")
 
     # ── 自动建表（元数据表）──
-    if settings.mysql_host:
+    if settings.mysql_host and settings.mysql_password:
         try:
             from sqlalchemy import text
             from app.services.sql.db_utils import get_db_sync
