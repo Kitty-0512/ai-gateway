@@ -14,6 +14,8 @@ pinned: false
 
 **技术栈**：Python · FastAPI · LangChain · MCP SDK · Vue 3 · Element Plus · ECharts · MySQL
 
+🌐 **在线访问**：[https://ai-gateway-1qp6.onrender.com](https://ai-gateway-1qp6.onrender.com)
+
 核心链路：
 
 ```
@@ -87,7 +89,7 @@ uvicorn app.main:app --reload --port 8001
 
 后端启动在 `http://127.0.0.1:8001`，交互式文档见 `http://127.0.0.1:8001/docs`。
 
-### 前端
+### 前端（开发模式，API 代理到 Render）
 
 ```bash
 cd frontend
@@ -95,7 +97,9 @@ npm install
 npm run dev
 ```
 
-前端启动在 `http://localhost:3000`，开发环境下 `/api` 请求由 Vite 代理转发到后端 `8001` 端口。
+前端启动在 `http://localhost:3000`，Vite 代理将 `/api` 请求转发到线上 Render 服务 `https://ai-gateway-1qp6.onrender.com`，无需本地后端。
+
+> 如需本地后端，将 `frontend/vite.config.js` 中 `proxy.target` 改回 `http://127.0.0.1:8001`。
 
 ### 环境变量
 

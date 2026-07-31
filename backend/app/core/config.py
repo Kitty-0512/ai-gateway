@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     # ---- 应用 ----
     app_name: str = "AI 统一分析网关"
     api_prefix: str = "/api"
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000"
+    cors_origins: str = "https://ai-gateway-1qp6.onrender.com,http://localhost:3000"
 
     # ---- DeepSeek / OpenAI 兼容接口 ----
     openai_api_key: str = ""
@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     mcp_server_env: str = ""
     mcp_connect_timeout: float = 30.0
     mcp_call_timeout: float = 30.0
-    mcp_base_url: str = "http://127.0.0.1:8000"
+    mcp_base_url: str = "https://ai-gateway-1qp6.onrender.com"
 
     # ---- Filesystem MCP Server（文件上传/读取）----
     fs_mcp_server_enabled: bool = True
