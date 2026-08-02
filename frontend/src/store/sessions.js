@@ -1,14 +1,15 @@
 /**
- * 会话 Pinia Store。
+ * Session Pinia Store.
  *
- * 所有会话数据持久化到 localStorage，不依赖后端数据库。
- * 每个会话结构：
+ * All session data persisted to localStorage.
+ * Each session:
  *   {
- *     id: string,          // 时间戳 + 随机数
- *     title: string,       // 第一条用户消息的前 20 字
- *     tool: string,        // "sql" | "log" | ""（从后端 routed_tool 获取）
- *     createdAt: string,   // ISO 时间
+ *     id: string,
+ *     title: string,
+ *     tool: string,        // "sql" | "log" | ""
+ *     createdAt: string,   // ISO
  *     messages: []         // [{ role, content, tool?, sql?, chartConfig?, ... }]
+ *     meta: {}
  *   }
  */
 
@@ -19,11 +20,11 @@ import { load, save } from '@/utils/storage'
 const STORAGE_KEY = 'gateway_sessions'
 
 export const useSessionStore = defineStore('sessions', () => {
-  // ── 状态 ──
+  // ── State ──
   const sessions = ref(load(STORAGE_KEY, []))
   const currentId = ref(null)
 
-  // ── 计算属性 ──
+  // ── Computed ──
   const currentSession = computed(() =>
     sessions.value.find((s) => s.id === currentId.value) || null
   )
@@ -34,17 +35,68 @@ export const useSessionStore = defineStore('sessions', () => {
     )
   )
 
-  // ── 持久化 ──
+  /** Recent 5 sessions for Dashboard */
+  const recentSessions = computed(() =>
+    sortedSessions.value.slice(0, 5)
+  )
+
+  /** Total session count */
+  const totalSessions = computed(() => sessions.value.length)
+
+  /** Sessions with SQL tool */
+  const sqlSessions = computed(() =>
+    sessions.value.filter((s) => s.tool === 'sql')
+  )
+
+  /** Sessions with log tool */
+  const logSessions = computed(() =>
+    sessions.value.filter((s) => s.tool === 'log')
+  )
+
+  /** Count of assistant messages with SQL result (query completions) */
+  const sqlQueryCount = computed(() => {
+    let count = 0
+    for (const s of sessions.value) {
+      for (const m of s.messages) {
+        if (m.role === 'assistant' && m.sql) count++
+      }
+    }
+    return count
+  })
+
+  /** Count of sessions with at least one message */
+  const activeSessionCount = computed(() =>
+    sessions.value.filter((s) => s.messages.length > 0).length
+  )
+
+  /** Count of data files uploaded (SQL sessions with dataset) */
+  const datasetCount = computed(() =>
+    sqlSessions.value.filter((s) => s.meta?.datasetIds?.length).length
+  )
+
+  /** Count log diagnoses completed (log sessions with at least one assistant message containing result) */
+  const logDiagnosisCount = computed(() => {
+    let count = 0
+    for (const s of logSessions.value) {
+      const hasResult = s.messages.some(
+        (m) => m.role === 'assistant' && m.result && !m.streaming
+      )
+      if (hasResult) count++
+    }
+    return count
+  })
+
+  // ── Persist ──
   function _persist() {
     save(STORAGE_KEY, sessions.value)
   }
 
-  // ── 会话操作 ──
+  // ── Session CRUD ──
   function create(initialData = {}) {
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
     const session = {
       id,
-      title: '新会话',
+      title: 'New Session',
       tool: '',
       createdAt: new Date().toISOString(),
       messages: [],
@@ -71,7 +123,7 @@ export const useSessionStore = defineStore('sessions', () => {
 
   function setTitle(id, title) {
     const s = sessions.value.find((s) => s.id === id)
-    if (s && s.title === '新会话') {
+    if (s && s.title === 'New Session') {
       s.title = title.slice(0, 20)
       _persist()
     }
@@ -103,7 +155,7 @@ export const useSessionStore = defineStore('sessions', () => {
     const s = sessions.value.find((s) => s.id === id)
     if (!s) return
     s.messages.push({ role, content, timestamp: new Date().toISOString(), ...extra })
-    if (role === 'user' && s.title === '新会话') {
+    if (role === 'user' && s.title === 'New Session') {
       setTitle(id, content)
     }
     _persist()
@@ -121,6 +173,14 @@ export const useSessionStore = defineStore('sessions', () => {
     currentId,
     currentSession,
     sortedSessions,
+    recentSessions,
+    totalSessions,
+    sqlSessions,
+    logSessions,
+    sqlQueryCount,
+    activeSessionCount,
+    datasetCount,
+    logDiagnosisCount,
     create,
     select,
     remove,

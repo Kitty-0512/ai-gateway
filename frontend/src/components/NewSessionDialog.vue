@@ -18,12 +18,12 @@ const acceptExtensions = computed(() =>
 )
 const fileName = computed(() => file.value?.name || '')
 const modeTitle = computed(() =>
-  tool.value === 'sql' ? '数据分析' : '运维日志'
+  tool.value === 'sql' ? '数据分析' : '日志诊断'
 )
 const inputPlaceholder = computed(() =>
   tool.value === 'sql'
-    ? '先上传 Excel / CSV 数据集，再在会话里提问'
-    : '可直接粘贴日志内容，或上传日志文件后自动分析'
+    ? '上传 Excel / CSV 数据集，之后可在会话中提问分析'
+    : '直接粘贴日志内容，或上传日志文件后自动分析'
 )
 
 function onDragOver(e) {
@@ -48,8 +48,8 @@ function loadFile(f) {
     : ['.log', '.txt', '.out']
   if (!allowed.includes(ext)) {
     ElMessage.warning(tool.value === 'sql'
-      ? '数据分析仅支持 .xlsx / .xls / .csv'
-      : '运维日志仅支持 .log / .txt / .out')
+      ? '仅支持 .xlsx / .xls / .csv 格式'
+      : '仅支持 .log / .txt / .out 格式')
     return
   }
   file.value = f
@@ -96,7 +96,7 @@ async function handleStart() {
           datasetIds: result.dataset_id ? [result.dataset_id] : [],
           datasetInfo: result,
         },
-        welcomeMessage: `已上传数据集《${file.value.name}》\n表名：${result.table_name}\n行数：${result.row_count}\n现在可以继续提问，例如：各门店销售额排名。`,
+        welcomeMessage: `已上传数据集《${file.value.name}》\n表名：${result.table_name}\n行数：${result.row_count}\n现在可以继续提问，例如：各门店销售额排名、月度趋势分析。`,
       })
       ElMessage.success('数据集上传成功')
       resetForm()
@@ -131,7 +131,7 @@ async function handleStart() {
           mode: 'log',
           content: text.value.trim(),
         },
-        userMessage: '请分析以下日志内容',
+        userMessage: '分析以下日志内容',
       }
     } else {
       ElMessage.warning('请先上传日志文件或输入日志内容')
@@ -156,7 +156,7 @@ const canStart = computed(() =>
   <el-dialog
     v-model="visible"
     title="新建会话"
-    width="560px"
+    width="520px"
     :close-on-click-modal="false"
     destroy-on-close
   >
@@ -167,8 +167,11 @@ const canStart = computed(() =>
         :class="{ active: tool === 'sql' }"
         @click="changeTool('sql')"
       >
-        <strong>数据分析</strong>
-        <span>上传 Excel / CSV 后提问</span>
+        <el-icon :size="18"><TrendCharts /></el-icon>
+        <div class="tool-card-text">
+          <strong>数据分析</strong>
+          <span>上传 Excel / CSV，生成 SQL 查询</span>
+        </div>
       </button>
       <button
         type="button"
@@ -176,12 +179,15 @@ const canStart = computed(() =>
         :class="{ active: tool === 'log' }"
         @click="changeTool('log')"
       >
-        <strong>运维日志</strong>
-        <span>上传日志或直接粘贴报错</span>
+        <el-icon :size="18"><Monitor /></el-icon>
+        <div class="tool-card-text">
+          <strong>日志诊断</strong>
+          <span>上传日志或粘贴错误内容</span>
+        </div>
       </button>
     </div>
 
-    <!-- 拖拽区 -->
+    <!-- Drop zone -->
     <div
       class="drop-zone"
       :class="{ dragging }"
@@ -190,7 +196,7 @@ const canStart = computed(() =>
       @drop="onDrop"
     >
       <div v-if="!file" class="drop-hint">
-        <el-icon :size="40" color="var(--el-color-primary)"><UploadFilled /></el-icon>
+        <el-icon :size="32" color="#94a3b8"><UploadFilled /></el-icon>
         <p>拖拽{{ modeTitle }}文件到这里</p>
         <p class="sub">当前支持 {{ acceptExtensions }}</p>
         <label class="file-btn">
@@ -204,11 +210,11 @@ const canStart = computed(() =>
           {{ fileName }}
         </el-tag>
         <p v-if="tool === 'log'" class="preview">{{ fileText.slice(0, 500) }}{{ fileText.length > 500 ? '...' : '' }}</p>
-        <p v-else class="preview">上传后会自动入库，随后可在当前数据分析会话中继续提问。</p>
+        <p v-else class="preview">文件将导入为数据集，之后可在会话中提问分析。</p>
       </div>
     </div>
 
-    <!-- 文本输入 -->
+    <!-- Text area -->
     <div v-if="tool === 'log'" class="text-area">
       <el-input
         v-model="text"
@@ -219,18 +225,17 @@ const canStart = computed(() =>
     </div>
     <div v-else class="sql-tip">
       <el-alert
-        title="数据分析会先上传文件生成数据集，然后你再在会话里输入分析问题。"
+        title="文件上传后将解析为数据集表，随后可用自然语言查询分析。"
         type="info"
         :closable="false"
         show-icon
       />
     </div>
 
-    <!-- 底部 -->
     <template #footer>
       <el-button @click="visible = false">取消</el-button>
       <el-button type="primary" :disabled="!canStart || submitting" :loading="submitting" @click="handleStart">
-        开始对话
+        开始会话
       </el-button>
     </template>
   </el-dialog>
@@ -240,73 +245,82 @@ const canStart = computed(() =>
 .tool-switch {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 16px;
 }
 
 .tool-card {
-  border: 1px solid var(--el-border-color);
-  border-radius: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
   padding: 14px;
-  background: var(--el-bg-color);
+  background: #ffffff;
   text-align: left;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
+  font-family: inherit;
+  color: #475569;
+}
+
+.tool-card:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.tool-card.active {
+  border-color: #2563eb;
+  background: #f8faff;
+  color: #1e293b;
+}
+
+.tool-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .tool-card strong {
   display: block;
-  font-size: 15px;
-  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .tool-card span {
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
-
-.tool-card.active {
-  border-color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
-  box-shadow: 0 0 0 1px var(--el-color-primary-light-5);
+  color: #64748b;
+  font-size: 11px;
 }
 
 .drop-zone {
-  border: 2px dashed var(--el-border-color);
-  border-radius: 12px;
-  padding: 28px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 6px;
+  padding: 24px;
   text-align: center;
-  transition: all 0.2s;
+  transition: all 0.15s;
   margin-bottom: 16px;
 }
 .drop-zone.dragging {
-  border-color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
+  border-color: #2563eb;
+  background: #f8faff;
 }
-.drop-hint p { margin: 8px 0 0; color: var(--el-text-color-regular); }
-.drop-hint .sub { font-size: 12px; color: var(--el-text-color-secondary); }
-.file-btn { margin-top: 12px; display: inline-block; cursor: pointer; }
+.drop-hint p { margin: 8px 0 0; color: #475569; }
+.drop-hint .sub { font-size: 12px; color: #94a3b8; }
+.file-btn { margin-top: 10px; display: inline-block; cursor: pointer; }
 
-.file-loaded {
-  text-align: left;
-}
+.file-loaded { text-align: left; }
 .preview {
-  margin: 12px 0 0;
+  margin: 10px 0 0;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.5;
-  color: var(--el-text-color-secondary);
-  max-height: 120px;
+  color: #64748b;
+  max-height: 100px;
   overflow: hidden;
   white-space: pre-wrap;
   word-break: break-all;
 }
 
-.text-area {
-  margin-top: 4px;
-}
-
-.sql-tip {
-  margin-top: 4px;
-}
+.text-area { margin-top: 4px; }
+.sql-tip { margin-top: 4px; }
 </style>

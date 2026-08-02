@@ -7,69 +7,82 @@ const props = defineProps({
 
 const expanded = ref(false)
 
-// ── 步骤数据 ──
+const diagnosisModeLabel = {
+  llm: 'LLM 结构化诊断',
+  mock: '本地模板诊断',
+  mock_fallback: 'LLM 失败回退模板',
+}
+
+const STAGE_MAP = {
+  understanding:  { label: '需求分析',       color: '#2563eb', icon: 'Search' },
+  generating_sql: { label: 'SQL 生成',       color: '#2563eb', icon: 'Edit' },
+  executing:      { label: '查询执行',       color: '#d97706', icon: 'CaretRight' },
+  analyzing:      { label: '报告生成',       color: '#059669', icon: 'DataAnalysis' },
+  charting:       { label: '图表生成',       color: '#059669', icon: 'TrendCharts' },
+  cleaning:       { label: '日志清洗',       color: '#2563eb', icon: 'Brush' },
+  identifying:    { label: '类型识别',       color: '#2563eb', icon: 'Search' },
+  identified:     { label: '类型已识别',     color: '#059669', icon: 'CircleCheck' },
+  locating:       { label: '根因分析',       color: '#d97706', icon: 'Aim' },
+  searching:      { label: '外部检索',       color: '#7c3aed', icon: 'Connection' },
+  search_done:    { label: '检索完成',       color: '#7c3aed', icon: 'Collection' },
+  generating:     { label: '诊断生成',       color: '#059669', icon: 'Document' },
+  refining:       { label: '二次诊断',       color: '#2563eb', icon: 'Refresh' },
+  repaired:       { label: 'SQL 已修复',     color: '#d97706', icon: 'Warning' },
+  fallback:       { label: '本地回退',       color: '#dc2626', icon: 'WarningFilled' },
+}
+
 function buildSteps() {
   const t = props.trace || {}
   const steps = []
-  const diagnosisModeLabel = {
-    llm: 'LLM 结构化诊断',
-    mock: '本地模板诊断',
-    mock_fallback: 'LLM 失败后回退模板',
-  }
 
-  // 1. 路由判断
   steps.push({
     label: '路由判断',
     detail: t.tool === 'sql' ? 'SQL 数据分析' : t.tool === 'log' ? '日志诊断' : (t.tool || '未知'),
     reason: t.toolReason || '',
-    color: '#409eff',
-    icon: '📍',
+    color: '#2563eb',
+    icon: 'Guide',
   })
 
   if (t.diagnosisMode) {
     steps.push({
       label: '诊断来源',
       detail: diagnosisModeLabel[t.diagnosisMode] || t.diagnosisMode,
-      color: t.diagnosisMode === 'llm' ? '#67c23a' : '#e6a23c',
-      icon: t.diagnosisMode === 'llm' ? '🤖' : '⚠️',
+      color: t.diagnosisMode === 'llm' ? '#059669' : '#d97706',
+      icon: t.diagnosisMode === 'llm' ? 'Monitor' : 'Warning',
     })
   }
 
-  // 2. 执行阶段
   if (t.stages && t.stages.length) {
     for (const s of t.stages) {
-      const stageInfo = STAGE_MAP[s] || { label: s, color: '#909399' }
+      const info = STAGE_MAP[s] || { label: s, color: '#94a3b8', icon: 'More' }
       steps.push({
-        label: stageInfo.label,
+        label: info.label,
         detail: '',
-        color: stageInfo.color,
-        icon: stageInfo.icon,
+        color: info.color,
+        icon: info.icon,
       })
     }
   }
 
-  // 3. SQL 详情
   if (t.sql) {
     steps.push({
-      label: t.sqlRepaired ? 'SQL（已自动修复）' : '生成的 SQL',
+      label: t.sqlRepaired ? 'SQL（自动修复）' : '生成 SQL',
       detail: t.sql,
-      color: t.sqlRepaired ? '#e6a23c' : '#67c23a',
-      icon: t.sqlRepaired ? '🔧' : '📝',
+      color: t.sqlRepaired ? '#d97706' : '#059669',
+      icon: t.sqlRepaired ? 'Warning' : 'Document',
       code: true,
     })
   }
 
-  // 4. SQL 重试信息
   if (t.retryCount > 0) {
     steps.push({
       label: `SQL 自动修复：${t.retryCount} 次重试`,
       detail: t.retryErrors?.join('\n') || `共 ${t.retryCount} 次重试后成功`,
-      color: '#e6a23c',
-      icon: '🔄',
+      color: '#d97706',
+      icon: 'Refresh',
     })
   }
 
-  // 5. 外部检索
   if (t.searchTrace) {
     const st = t.searchTrace
     const sources = st.sources || []
@@ -81,50 +94,31 @@ function buildSteps() {
       ...sources.map((s, i) => `${i + 1}. [${s.title}](${s.url})`),
     ]
     steps.push({
-      label: `外部检索 (${st.fetched_count || 0} 条引用)`,
+      label: `外部检索（${st.fetched_count || 0} 条引用）`,
       detail: detailLines.join('\n'),
-      color: '#9b59b6',
-      icon: '🌐',
+      color: '#7c3aed',
+      icon: 'Connection',
     })
   }
 
-  // 6. 日志证据
   if (t.evidence && t.evidence.length) {
     steps.push({
       label: `引用日志证据（${t.evidence.length} 条）`,
       detail: t.evidence.map((e, i) => `${i + 1}. ${e}`).join('\n'),
-      color: '#67c23a',
-      icon: '📋',
+      color: '#059669',
+      icon: 'Collection',
       code: true,
     })
   }
 
   return steps
 }
-
-const STAGE_MAP = {
-  understanding:  { label: '理解问题',       color: '#409eff', icon: '🧠' },
-  generating_sql: { label: '生成 SQL',       color: '#409eff', icon: '⚙️' },
-  executing:      { label: '执行查询',       color: '#e6a23c', icon: '⏳' },
-  analyzing:      { label: '生成分析报告',   color: '#67c23a', icon: '📊' },
-  charting:       { label: '生成图表',       color: '#67c23a', icon: '📈' },
-  cleaning:       { label: '清洗日志',       color: '#409eff', icon: '🧹' },
-  identifying:    { label: '识别日志类型',   color: '#409eff', icon: '🔍' },
-  identified:     { label: '已识别类型',     color: '#67c23a', icon: '✅' },
-  locating:       { label: '定位根因',       color: '#e6a23c', icon: '🎯' },
-  searching:      { label: '检索外部知识库', color: '#9b59b6', icon: '🌐' },
-  search_done:    { label: '外部检索完成',   color: '#9b59b6', icon: '📚' },
-  generating:     { label: '生成诊断建议',   color: '#67c23a', icon: '💡' },
-  refining:       { label: '二次诊断',       color: '#409eff', icon: '🔁' },
-  repaired:       { label: 'SQL 已修复',     color: '#e6a23c', icon: '🔧' },
-  fallback:       { label: 'LLM 失败，本地回退', color: '#f56c6c', icon: '⚠️' },
-}
 </script>
 
 <template>
   <div v-if="buildSteps().length" class="trace-wrap">
     <button class="trace-toggle" @click="expanded = !expanded">
-      <span class="toggle-icon">{{ expanded ? '▾' : '▸' }}</span>
+      <el-icon class="toggle-icon"><component :is="expanded ? 'ArrowDown' : 'ArrowRight'" /></el-icon>
       执行过程
       <span class="step-count">{{ buildSteps().length }} 步</span>
     </button>
@@ -135,16 +129,16 @@ const STAGE_MAP = {
         :key="i"
         class="trace-step"
       >
-        <!-- 时间线 -->
         <div class="tl-line">
           <div class="tl-dot" :style="{ background: step.color }" />
           <div v-if="i < buildSteps().length - 1" class="tl-bar" />
         </div>
 
-        <!-- 内容 -->
         <div class="tl-content">
           <div class="tl-label">
-            <span class="tl-icon">{{ step.icon }}</span>
+            <el-icon class="tl-icon" :style="{ color: step.color }">
+              <component :is="step.icon" />
+            </el-icon>
             {{ step.label }}
           </div>
           <div v-if="step.reason" class="tl-reason">{{ step.reason }}</div>
@@ -162,8 +156,8 @@ const STAGE_MAP = {
 <style scoped>
 .trace-wrap {
   margin-top: 8px;
-  border-top: 1px solid var(--el-border-color-lighter);
-  padding-top: 6px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 8px;
 }
 
 .trace-toggle {
@@ -173,15 +167,16 @@ const STAGE_MAP = {
   background: none;
   border: none;
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: #64748b;
   cursor: pointer;
   padding: 2px 0;
+  font-family: inherit;
+  font-weight: 500;
 }
-.trace-toggle:hover { color: var(--el-color-primary); }
-.toggle-icon { font-size: 10px; width: 12px; text-align: center; }
-.step-count { color: var(--el-text-color-placeholder); font-size: 11px; }
+.trace-toggle:hover { color: #2563eb; }
+.toggle-icon { font-size: 11px; }
+.step-count { color: #94a3b8; font-size: 10px; font-weight: 400; }
 
-/* ── 时间线 ── */
 .trace-body {
   margin-top: 8px;
   padding-left: 2px;
@@ -201,18 +196,18 @@ const STAGE_MAP = {
 }
 
 .tl-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
-  margin-top: 3px;
+  margin-top: 4px;
 }
 
 .tl-bar {
   width: 2px;
   flex: 1;
   min-height: 10px;
-  background: var(--el-border-color-light);
+  background: #e2e8f0;
   margin: 3px 0;
 }
 
@@ -225,25 +220,27 @@ const STAGE_MAP = {
 .tl-label {
   font-size: 12px;
   font-weight: 500;
-  color: var(--el-text-color-regular);
+  color: #334155;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
-.tl-icon { font-size: 12px; }
+.tl-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+}
 
 .tl-reason {
   font-size: 11px;
-  color: var(--el-text-color-placeholder);
+  color: #94a3b8;
   margin-top: 2px;
-  font-style: italic;
 }
 
 .tl-detail {
   margin: 4px 0 0;
   padding: 6px 8px;
-  background: #f5f7fa;
+  background: #f8fafc;
   border-radius: 6px;
   font-size: 11px;
   line-height: 1.5;
@@ -251,12 +248,12 @@ const STAGE_MAP = {
   word-break: break-word;
   max-height: 200px;
   overflow: auto;
-  color: var(--el-text-color-regular);
+  color: #334155;
 }
 
 .tl-detail.code {
   font-family: 'IBM Plex Mono', Consolas, monospace;
-  background: #1e1e2e;
-  color: #a6e3a1;
+  background: #1e293b;
+  color: #e2e8f0;
 }
 </style>
