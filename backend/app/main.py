@@ -1,5 +1,8 @@
 """
-AI 统一分析网关。
+企业智能分析与运维诊断平台。
+
+面向企业业务数据查询与应用运维排查的多工具智能分析平台。
+统一入口 → Router → 一次性 Planner → Tool Registry(SQL/Log) → 单工具直返/多工具 Synthesizer → SSE。
 
 合并两个子服务：
 - SQL 数据分析（Text-to-SQL）：routers/sql_analyze.py
@@ -10,7 +13,7 @@ AI 统一分析网关。
     - 也可手动指定 mode="sql"|"log" 跳过自动路由
 
 MCP Server 暴露：通过 fastapi_mcp 把核心端点包装为 MCP 工具，
-    供外部 AI Agent（Claude Desktop / Cursor / etc.）直接调用。
+    供外部 AI Agent（Claude Desktop / etc.）直接调用。
 """
 
 from __future__ import annotations
@@ -22,12 +25,14 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
+from app.core.orchestrator import run_stream
 from app.core.router import resolve_tool
 from app.core.session_store import store
+from app.core.sse_utils import sse_event_generator
 from app.routers import log_diagnose, sql_analyze
 
 logging.basicConfig(
@@ -165,8 +170,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    description="Text-to-SQL 数据分析 + 日志诊断 统一网关",
-    version="2.0.0",
+    description="面向企业业务数据查询与应用运维排查的多工具智能分析平台（Text-to-SQL + 日志诊断，统一编排）",
+    version="3.0.0",
     lifespan=lifespan,
 )
 
@@ -191,7 +196,7 @@ try:
     _mcp_enabled = True
     mcp = FastApiMCP(
         app,
-        name="AI 统一分析网关 MCP Server",
+        name="企业智能分析与运维诊断平台 MCP Server",
         description="Text-to-SQL 数据分析 + 日志诊断 统一网关",
         describe_all_responses=True,
         include_operations=[
@@ -326,6 +331,38 @@ async def unified_chat(payload: ChatRequest):
         }
 
 
+@app.post("/api/chat/stream")
+async def unified_chat_stream(payload: ChatRequest):
+    """
+    统一分析入口（SSE 流式）—— 编排层主流程。
+
+    Router → Planner（一次性，≤3 步）→ Tool Registry（SQL/Log）
+          → 单工具直接返回 / 多工具 Synthesizer → 统一 SSE。
+
+    事件类型：routing / plan / stage / sql / tool_done / delta / trace / result / error
+    """
+    body = payload.model_dump()
+
+    # 会话管理（沿用内存会话，先建/取会话）
+    sess = store.get_or_create(body.get("session_id"), body.get("mode") or "sql")
+    session_id = sess["session_id"]
+
+    async def producer():
+        yield "session", {"session_id": session_id}
+        async for event, data in run_stream(body):
+            yield event, data
+
+    return StreamingResponse(
+        sse_event_generator(producer()),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 # ---- 会话管理 ----
 
 @app.get("/api/sessions")
@@ -364,7 +401,7 @@ async def health_live():
 async def service_info():
     return {
         "service": settings.app_name,
-        "version": "2.0.0",
+        "version": "3.0.0",
         "tools": ["sql", "log"],
         "docs": "/docs",
         "unified_chat": "/api/chat",

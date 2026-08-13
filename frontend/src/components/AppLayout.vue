@@ -26,7 +26,7 @@ const menuItems = [
             <path d="M5.64 5.64l2.83 2.83m7.07 7.07l2.83 2.83M5.64 18.36l2.83-2.83m7.07-7.07l2.83-2.83"/>
           </svg>
         </span>
-        <span class="brand-text">AI 分析控制台</span>
+        <span class="brand-text">智能分析与运维诊断</span>
       </div>
 
       <el-menu
@@ -49,7 +49,7 @@ const menuItems = [
           <span class="status-dot" />
           <span class="status-text">系统运行中</span>
         </div>
-        <div class="version-text">v2.0.0</div>
+        <div class="version-text">v3.0.0</div>
       </div>
     </aside>
 

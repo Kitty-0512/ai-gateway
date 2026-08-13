@@ -6,17 +6,52 @@
 """
 
 from functools import lru_cache
+from pathlib import Path
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
+
+# 指向 backend/.env（相对本文件定位，避免受启动 CWD 影响）。
+# 存在则本地开发使用；Render 等部署环境没有该文件，会自动回退到进程环境变量。
+_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_file=str(_ENV_FILE), env_file_encoding="utf-8", extra="ignore"
     )
 
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """
+        自定义配置来源优先级（从高到低）：
+            init 参数 > .env 文件 > 进程/系统环境变量 > secrets 文件
+
+        默认 pydantic-settings 中环境变量优先于 .env，会导致本机
+        Windows 用户级 OPENAI_BASE_URL/OPENAI_API_KEY（指向第三方代理）
+        覆盖掉本项目 .env。这里把 dotenv 提到 env 之前修正该行为：
+          - 本地：存在 .env → .env 优先（不再被系统环境变量覆盖）
+          - Render：无 .env → dotenv 源为空，自动回退到平台注入的环境变量
+        """
+        return (
+            init_settings,
+            dotenv_settings,
+            env_settings,
+            file_secret_settings,
+        )
+
     # ---- 应用 ----
-    app_name: str = "AI 统一分析网关"
+    app_name: str = "企业智能分析与运维诊断平台"
     api_prefix: str = "/api"
     cors_origins: str = "https://ai-gateway-1qp6.onrender.com,http://localhost:3000"
 
@@ -52,6 +87,9 @@ class Settings(BaseSettings):
     mcp_connect_timeout: float = 30.0
     mcp_call_timeout: float = 30.0
     mcp_base_url: str = "https://ai-gateway-1qp6.onrender.com"
+    # 是否把 MCP 辅助工具（mysql_query / describe_table / read_file）注册进编排层
+    # 默认关闭：核心是 SQL/Log 两个工具，MCP 为可选辅助（见 tools/mcp_tool.py）
+    mcp_tools_enabled: bool = False
 
     # ---- Filesystem MCP Server（文件上传/读取）----
     fs_mcp_server_enabled: bool = True
@@ -97,3 +135,14 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+if __name__ == "__main__":
+    # 安全的配置自检：仅展示非敏感字段，绝不打印 API Key 明文。
+    s = get_settings()
+    key = s.openai_api_key.strip()
+    print("app_name    :", s.app_name)
+    print("env_file    :", _ENV_FILE, f"(exists={_ENV_FILE.exists()})")
+    print("base_url    :", s.openai_base_url)
+    print("model       :", s.openai_model)
+    print("api_key_set :", bool(key), f"(len={len(key)})")  # 只显示是否配置及长度

@@ -10,6 +10,7 @@ import {
 } from '@/utils/export'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ExecutionTrace from '@/components/ExecutionTrace.vue'
+import OrchestrationFlow from '@/components/OrchestrationFlow.vue'
 import NewSessionDialog from '@/components/NewSessionDialog.vue'
 
 const store = useSessionStore()
@@ -51,6 +52,56 @@ const inputPlaceholder = computed(() => {
 })
 
 const modeLabel = { sql: '数据分析', log: '日志诊断' }
+const TOOL_LABEL = { sql: 'SQL 数据分析', log: '日志诊断', mcp: '数据/文件工具' }
+
+// ── 编排流程实时状态（供 OrchestrationFlow 展示，单次请求共享）──
+const liveTrace = reactive({})
+function resetLiveTrace() {
+  Object.keys(liveTrace).forEach((k) => delete liveTrace[k])
+  Object.assign(liveTrace, {
+    tool: '', toolReason: '', toolConfidence: '',
+    sql: '', sqlRepaired: false, retryCount: 0,
+    stages: [], evidence: [],
+    plan: [], needsSynthesis: false, structured: null,
+    diagnosisMode: '', searchTrace: null, toolResults: null,
+    routerStatus: 'pending', plannerStatus: 'pending', synthStatus: 'idle',
+  })
+}
+
+function flowHasContent(t) {
+  return !!t && (t.plan?.length || t.structured?.plan?.length || t.tool || t.routerStatus === 'done')
+}
+
+function flowFromTrace(t) {
+  if (!t) return null
+  const steps = (t.plan || []).map((s) => ({
+    step: s.step,
+    tool: s.tool,
+    label: TOOL_LABEL[s.tool] || s.tool,
+    status: s.status || 'pending',
+    duration: s.duration_ms,
+  }))
+  if (t.structured?.tool_calls) {
+    for (const c of t.structured.tool_calls) {
+      const m = steps.find((x) => x.step === c.step)
+      if (m) { m.status = c.status; m.duration = c.duration_ms }
+    }
+  }
+  const synth = t.structured?.synthesis
+  const synthStatus = t.synthStatus && t.synthStatus !== 'idle'
+    ? t.synthStatus
+    : (synth?.invoked ? 'done' : 'pending')
+  return {
+    router: t.routerStatus || (t.tool ? 'done' : 'pending'),
+    routerLabel: TOOL_LABEL[t.tool] || t.toolReason || '',
+    planner: t.plannerStatus || (steps.length ? 'done' : 'pending'),
+    stepCount: steps.length,
+    steps,
+    showSynth: !!t.needsSynthesis || !!(synth && synth.invoked),
+    synth: synthStatus,
+    synthDuration: synth?.duration_ms,
+  }
+}
 
 // ── Session helpers ──
 function formatTime(iso) {
@@ -118,6 +169,9 @@ const STAGE_LABELS = {
   refining:       '二次诊断',
   repaired:       'SQL 已修复',
   fallback:       '本地回退',
+  tool_start:     '工具启动',
+  retrying:       '重试中',
+  synthesizing:   '综合分析',
 }
 
 function stageLabelText(key) {
@@ -174,16 +228,8 @@ async function sendRequest(payload, userMessage) {
   streamDraft.value = ''
   displayedSql.value = ''
 
-  const trace = reactive({
-    tool: '',
-    toolReason: '',
-    toolConfidence: '',
-    sql: '',
-    sqlRepaired: false,
-    retryCount: 0,
-    stages: [],
-    evidence: [],
-  })
+  resetLiveTrace()
+  const trace = liveTrace
 
   abortCtrl?.abort()
   abortCtrl = new AbortController()
@@ -192,10 +238,39 @@ async function sendRequest(payload, userMessage) {
     await unifiedChatStream(
       payload,
       {
+        routing(data) {
+          trace.tool = trace.tool || data.tool || ''
+          trace.toolReason = trace.toolReason || data.reason || ''
+          trace.toolConfidence = trace.toolConfidence || data.confidence || ''
+          trace.routerStatus = 'done'
+          trace.plannerStatus = 'running'
+        },
+        plan(data) {
+          trace.plan = (data.steps || []).map((s) => ({ ...s, status: 'pending' }))
+          trace.needsSynthesis = !!data.needs_synthesis
+          trace.plannerStatus = 'done'
+        },
+        tool_done(data) {
+          const p = trace.plan.find((s) => s.step === data.step)
+          if (p) {
+            p.status = data.status
+            p.duration_ms = data.duration_ms
+            p.summary = data.summary
+          }
+          if (data.step) trace.plan = [...trace.plan]
+        },
+        trace(data) {
+          trace.structured = data
+        },
         stage(data) {
           stageLabel.value = data.label || data.stage
           if (data.stage) trace.stages.push(data.stage)
           if (data.search_trace) trace.searchTrace = data.search_trace
+          if (data.step) {
+            const p = trace.plan.find((s) => s.step === data.step)
+            if (p && p.status === 'pending') { p.status = 'running'; trace.plan = [...trace.plan] }
+          }
+          if (data.stage === 'synthesizing') trace.synthStatus = 'running'
         },
         sql(data) {
           displayedSql.value = data.sql
@@ -217,11 +292,16 @@ async function sendRequest(payload, userMessage) {
             : ''
           const content = data.answer || logContent || streamDraft.value || '分析完成'
 
-          trace.tool = tool
-          trace.toolReason = data.routed_tool?.reason || ''
-          trace.toolConfidence = data.routed_tool?.confidence || ''
+          trace.tool = tool || trace.tool
+          trace.toolReason = data.routed_tool?.reason || trace.toolReason
+          trace.toolConfidence = data.routed_tool?.confidence || trace.toolConfidence
           trace.diagnosisMode = data.meta?.mode || ''
           trace.sql = trace.sql || data.sql || ''
+          trace.structured = data.trace || trace.structured
+          trace.toolResults = data.tool_results || null
+          trace.routerStatus = 'done'
+          trace.plannerStatus = 'done'
+          if (trace.needsSynthesis) trace.synthStatus = 'done'
 
           const ev = data.result?.evidence
           if (!isLogFollowUp && ev && Array.isArray(ev) && ev.length) trace.evidence = ev
@@ -243,6 +323,9 @@ async function sendRequest(payload, userMessage) {
         },
         error(data) {
           errorMsg.value = data.message || '请求失败'
+          const running = trace.plan.find((s) => s.status === 'running')
+          if (running) { running.status = 'failed'; trace.plan = [...trace.plan] }
+          if (trace.synthStatus === 'running') trace.synthStatus = 'failed'
           store.updateLastMessage(store.currentId, {
             content: errorMsg.value,
             streaming: false,
@@ -590,29 +673,13 @@ const lastAssistantMsg = computed(() => {
 
             <!-- Assistant Response -->
             <template v-if="msg.role === 'assistant'">
-              <!-- Pipeline Steps (streaming or trace) -->
-              <div v-if="msg.streaming || (msg.trace && msg.trace.stages && msg.trace.stages.length)" class="pipeline-card">
-                <div class="card-header">分析流程</div>
-                <div class="pipeline-steps">
-                  <div
-                    v-for="(stage, si) in (msg.streaming ? (msg.trace?.stages || []) : (msg.trace?.stages || []))"
-                    :key="si"
-                    class="pipeline-step done"
-                  >
-                    <el-icon class="step-icon done"><Check /></el-icon>
-                    <span class="step-label">{{ stageLabelText(stage) }}</span>
-                  </div>
-                  <!-- Current stage -->
-                  <div v-if="msg.streaming && stageLabel && !msg.trace?.stages?.length" class="pipeline-step running">
-                    <span class="step-dot" />
-                    <span class="step-label">{{ stageLabel }}</span>
-                  </div>
-                  <div v-if="msg.streaming && stageLabel && msg.trace?.stages?.length" class="pipeline-step running">
-                    <span class="step-dot" />
-                    <span class="step-label">{{ stageLabel }}</span>
-                  </div>
-                </div>
-              </div>
+              <!-- Orchestration Flow (Router → Planner → Tools → Synthesizer) -->
+              <OrchestrationFlow
+                v-if="msg.streaming || flowHasContent(msg.trace)"
+                :flow="flowFromTrace(msg.streaming ? liveTrace : msg.trace)"
+                :streaming="!!msg.streaming"
+                :current-label="msg.streaming ? stageLabel : ''"
+              />
 
               <!-- SQL Card -->
               <div v-if="msg.sql" class="sql-card">
@@ -950,11 +1017,14 @@ const lastAssistantMsg = computed(() => {
 
 .request-card {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #eef2f7;
   border-left: 3px solid #2563eb;
-  border-radius: 6px;
-  padding: 12px 16px;
+  border-radius: 14px;
+  padding: 13px 18px;
   margin-bottom: 12px;
+  box-shadow:
+    5px 5px 14px rgba(148, 163, 184, 0.1),
+    -5px -5px 14px rgba(255, 255, 255, 0.9);
 }
 .request-label {
   font-size: 10px;
@@ -976,22 +1046,25 @@ const lastAssistantMsg = computed(() => {
 .result-card,
 .streaming-card {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  margin-bottom: 10px;
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  margin-bottom: 12px;
   overflow: hidden;
+  box-shadow:
+    5px 5px 14px rgba(148, 163, 184, 0.12),
+    -5px -5px 14px rgba(255, 255, 255, 0.9);
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
+  padding: 11px 18px;
   font-size: 12px;
   font-weight: 600;
   color: #475569;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background: #fafbfc;
+  border-bottom: 1px solid #eef2f7;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }

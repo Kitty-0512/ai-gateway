@@ -1,6 +1,6 @@
-# AI Analysis Console
+# 企业智能分析与运维诊断平台
 
-面向企业数据分析与运维诊断的统一 AI 分析控制台。
+面向企业业务数据查询与应用运维排查的多工具智能分析平台：提供统一的自然语言分析入口，通过任务路由与一次性规划（Planner）进入 Text-to-SQL 与日志诊断流程，结合 MCP 工具调用、LLM 推理与 SSE 流式交互完成分析结果输出。
 
 **在线访问**：[https://ai-gateway-1qp6.onrender.com](https://ai-gateway-1qp6.onrender.com)
 
@@ -39,18 +39,50 @@
 
 ---
 
-## 核心链路
+## 核心链路（统一编排）
 
 ```
-请求到达 → 自动路由决策 → MCP 工具编排 → LLM 生成 + 自我纠错 → 安全过滤 → SSE 流式输出
+用户问题
+   ↓
+统一入口 /api/chat/stream
+   ↓
+Intent Router（意图初判）
+   ↓
+One-shot Planner（一次性规划，≤3 步）
+   ↓
+Tool Registry ── SQL Tool / Log Tool（MCP Tool 为可选辅助，延后）
+   ↓
+Tool Observations
+   ↓
+单工具 → 直接返回 ；多工具 → LLM Synthesizer 综合
+   ↓
+Execution Trace + SSE 流式响应
+   ↓
+Vue 分析控制台
 ```
 
 ### 技术特性
 
-- **统一入口** `POST /api/chat`：根据文件后缀、日志格式特征、关键词、LLM 意图分类逐级自动路由到 SQL 分析或日志诊断
-- **MCP 双向协议**：网关既作为 MCP Client 编排 MySQL / Filesystem / Fetch 工具，也通过 `fastapi_mcp` 对外暴露标准工具
-- **SQL 安全与稳定性**：列级字段白名单、行级 WHERE 条件动态注入、敏感信息脱敏；执行失败时携带历史上下文重试
-- **可观测执行轨迹**：SSE 推送每一步决策、工具调用与修复历史，前端以折叠时间线面板完整展示
+- **统一 SSE 入口** `POST /api/chat/stream`：Router 意图初判 → Planner 一次性规划 → Tool Registry 执行 → 单工具直返 / 多工具综合，全程 SSE 流式（事件：`routing / plan / stage / sql / tool_done / delta / trace / result / error`）
+- **一次性 Planner（非 ReAct）**：只规划一次，最多 3 步，`needs_synthesis` 由 `len(steps) > 1` 代码推导；解析失败自动 fallback 到 Router 单工具，绝不退化为无限决策循环
+- **Tool Registry 解耦**：业务层（Planner）只认识工具名，执行层（`sql_generator` / `diagnoser` / `mcp_client`）被薄包装为可注册工具，原有 pipeline 完全复用
+- **两层容错互不叠加**：SQL 逻辑错由底层 `execute_sql_with_repair` 自愈（≤3 次）；编排层外层 retry 仅对基础设施类失败生效（≤2 次）。多工具允许部分成功（如 SQL ✓ / Log ✗）
+- **MCP 双向协议**：既作为 MCP Client 编排 MySQL / Filesystem / Fetch 工具，也通过 `fastapi_mcp` 对外暴露标准工具
+- **可观测执行轨迹**：轻量 Trace（routing / plan / tool_calls / synthesis）随 SSE 下发，前端时间线面板展示每一步工具状态与耗时
+
+### 能力边界（刻意约束，避免过度设计）
+
+| 已有能力（复用） | 本次实现（编排层） | 明确不做 |
+|---|---|---|
+| Text-to-SQL | Unified SSE Entry | Multi-Agent / ReAct Loop |
+| SQL 自我纠错 | Intent Router | 无限 Planner |
+| 日志诊断 | One-shot Planner | Model Router / Provider Fallback |
+| 日志解析/脱敏 | Tool Registry | Rate Limit / Token Billing |
+| MCP Client | SQL Tool / Log Tool | OpenTelemetry |
+| Vue 控制台 | 条件式 Synthesizer | Prometheus / Grafana |
+| ExecutionTrace | 轻量 Trace + 统一 SSE | 可选 MCP Tool（辅助，延后） |
+
+> 定位为「多工具统一智能分析平台」，而非模型网关（Model Gateway / LiteLLM）。
 
 ---
 
@@ -60,8 +92,13 @@
 ai-gateway/
 ├── backend/                     FastAPI 后端
 │   ├── app/
-│   │   ├── main.py              应用入口、统一 /api/chat、MCP Server 暴露
+│   │   ├── main.py              应用入口、统一 /api/chat 与 /api/chat/stream、MCP Server 暴露
 │   │   ├── core/                配置、路由决策、LLM 与 MCP 客户端、沙箱、SSE 工具
+│   │   │   ├── orchestrator.py  编排主流程（Router→Planner→Tools→Synthesizer→SSE）
+│   │   │   ├── planner.py       一次性任务规划（≤3 步，失败 fallback）
+│   │   │   ├── synthesizer.py   多工具结果综合（仅多工具场景调用）
+│   │   │   ├── trace.py         轻量执行追踪 TraceCollector
+│   │   │   └── tools/           Tool Registry + SQL/Log 工具封装
 │   │   ├── models/              Pydantic / SQLAlchemy 数据模型
 │   │   ├── routers/             sql_analyze、log_diagnose 子路由
 │   │   └── services/

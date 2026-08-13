@@ -59,15 +59,20 @@ export async function uploadLogFile(file, extra = {}) {
 // ── SSE 流式 ─────────────────────────────────────────────
 
 /**
- * SSE 事件处理器类型：
- *   stage(data)  → { stage, label }
- *   sql(data)    → { sql, repaired? }
- *   delta(data)  → { text }
- *   result(data) → 完整响应 JSON（含 routed_tool, answer / result 等）
- *   error(data)  → { message }
+ * SSE 事件处理器类型（统一编排入口 /api/chat/stream）：
+ *   session(data)   → { session_id }
+ *   routing(data)   → { tool, reason, confidence }
+ *   plan(data)      → { steps: [{step, tool}], needs_synthesis, source }
+ *   stage(data)     → { step?, tool?, stage, label }
+ *   sql(data)       → { step?, sql, repaired? }
+ *   tool_done(data) → { step, tool, status, summary, duration_ms, error? }
+ *   delta(data)     → { text, source? }
+ *   trace(data)     → 完整 trace JSON
+ *   result(data)    → 完整响应 JSON（含 routed_tool, answer / result 等）
+ *   error(data)     → { message }
  */
 export async function unifiedChatStream(payload, handlers = {}, signal) {
-  const res = await fetch(`${API_BASE}/chat`, {
+  const res = await fetch(`${API_BASE}/chat/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -115,6 +120,11 @@ export async function unifiedChatStream(payload, handlers = {}, signal) {
         else if (event === 'delta') handlers.delta?.(data)
         else if (event === 'result') handlers.result?.(data)
         else if (event === 'error') handlers.error?.(data)
+        else if (event === 'session') handlers.session?.(data)
+        else if (event === 'routing') handlers.routing?.(data)
+        else if (event === 'plan') handlers.plan?.(data)
+        else if (event === 'tool_done') handlers.tool_done?.(data)
+        else if (event === 'trace') handlers.trace?.(data)
       } catch (e) {
         console.warn('SSE parse warning:', e)
       }

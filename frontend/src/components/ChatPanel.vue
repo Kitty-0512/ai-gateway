@@ -427,7 +427,7 @@ function setMsgRef(el, idx) {
     <div ref="chatEl" class="chat-body">
       <div v-if="!store.currentSession" class="no-session">
         <el-icon :size="48"><ChatLineSquare /></el-icon>
-        <h3>AI 统一分析网关</h3>
+        <h3>企业智能分析与运维诊断平台</h3>
         <p>新建一个会话，开始数据分析或日志诊断</p>
       </div>
       <el-alert

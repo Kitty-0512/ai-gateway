@@ -31,8 +31,80 @@ const STAGE_MAP = {
   fallback:       { label: '本地回退',       color: '#dc2626', icon: 'WarningFilled' },
 }
 
+const TOOL_LABEL = { sql: 'SQL 数据分析', log: '日志诊断', mcp: '数据/文件工具' }
+const STATUS_STYLE = {
+  success: { color: '#059669', icon: 'CircleCheck' },
+  needs_input: { color: '#d97706', icon: 'QuestionFilled' },
+  failed: { color: '#dc2626', icon: 'CircleClose' },
+  running: { color: '#2563eb', icon: 'Loading' },
+  pending: { color: '#94a3b8', icon: 'More' },
+}
+
+function fmtMs(ms) {
+  if (ms == null) return ''
+  return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`
+}
+
+function buildStructuredSteps(st) {
+  const steps = []
+
+  if (st.routing?.tool) {
+    steps.push({
+      label: '路由判断',
+      detail: TOOL_LABEL[st.routing.tool] || st.routing.tool,
+      reason: st.routing.reason || '',
+      color: '#2563eb',
+      icon: 'Guide',
+    })
+  }
+
+  const plan = st.plan || []
+  if (plan.length) {
+    steps.push({
+      label: `执行计划（${plan.length} 步）`,
+      detail: plan.map((p) => `Step ${p.step}: ${TOOL_LABEL[p.tool] || p.tool}`).join('\n'),
+      color: '#7c3aed',
+      icon: 'List',
+    })
+  }
+
+  for (const call of st.tool_calls || []) {
+    const style = STATUS_STYLE[call.status] || STATUS_STYLE.pending
+    const stageText = (call.stages || []).map((s) => STAGE_MAP[s]?.label || s).join(' → ')
+    const detailLines = []
+    if (call.summary) detailLines.push(call.summary)
+    if (call.error) detailLines.push(`错误：${call.error}`)
+    if (stageText) detailLines.push(`阶段：${stageText}`)
+    if (call.sql) detailLines.push(`SQL：${call.sql}`)
+    steps.push({
+      label: `Step ${call.step} · ${TOOL_LABEL[call.tool] || call.tool}${call.duration_ms != null ? '  ' + fmtMs(call.duration_ms) : ''}`,
+      detail: detailLines.join('\n'),
+      color: style.color,
+      icon: style.icon,
+      code: !!call.sql,
+    })
+  }
+
+  if (st.synthesis?.invoked) {
+    steps.push({
+      label: `综合分析${st.synthesis.duration_ms != null ? '  ' + fmtMs(st.synthesis.duration_ms) : ''}`,
+      detail: st.synthesis.model ? `模型：${st.synthesis.model}` : '',
+      color: '#059669',
+      icon: 'MagicStick',
+    })
+  }
+
+  return steps
+}
+
 function buildSteps() {
   const t = props.trace || {}
+
+  // 新版结构化 trace（来自编排层）优先
+  if (t.structured && (t.structured.tool_calls?.length || t.structured.plan?.length)) {
+    return buildStructuredSteps(t.structured)
+  }
+
   const steps = []
 
   steps.push({

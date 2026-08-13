@@ -13,7 +13,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'https://ai-gateway-1qp6.onrender.com',
+        target: 'http://127.0.0.1:8001',
         changeOrigin: true,
         configure: (proxy) => {
           proxy.on('proxyRes', (proxyRes) => {
