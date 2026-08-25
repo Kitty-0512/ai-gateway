@@ -255,13 +255,26 @@ async def run_stream(payload: dict[str, Any]) -> AsyncIterator[Event]:
     yield "routing", {"tool": hint_tool, "reason": hint_reason, "confidence": hint_conf}
 
     # ---- 2. Planner：一次性规划 ----
-    if manual_mode in ("sql", "log"):
-        from app.core.planner import Plan, PlanStep
+    # 即使手动指定 mode，也仍走 LLM Planner（避免永远强制 1 步）；
+    # 规划后再按 mode 过滤，只保留对应工具。
+    from app.core.planner import Plan, PlanStep
 
-        plan = Plan(steps=[PlanStep(step=1, tool=manual_mode, input={})], source="manual")
-    else:
-        pctx = _build_planner_context(ctx)
-        plan = await make_plan(ctx.question, hint_tool, hint_reason, pctx)
+    pctx = _build_planner_context(ctx)
+    plan = await make_plan(ctx.question, hint_tool, hint_reason, pctx)
+    if manual_mode in ("sql", "log"):
+        filtered = [
+            PlanStep(step=i, tool=s.tool, input=s.input)
+            for i, s in enumerate(
+                (x for x in plan.steps if x.tool == manual_mode), start=1
+            )
+        ]
+        if filtered:
+            plan = Plan(steps=filtered, source=plan.source)
+        else:
+            plan = Plan(
+                steps=[PlanStep(step=1, tool=manual_mode, input={})],
+                source="manual_fallback",
+            )
 
     trace.set_plan(plan.to_events())
     yield "plan", {
@@ -338,11 +351,26 @@ async def run_stream(payload: dict[str, Any]) -> AsyncIterator[Event]:
 
     answer = "".join(answer_parts).strip() or "综合分析完成。"
 
-    yield "trace", trace.to_dict()
-    yield "result", {
+    # 多步时 Synthesizer 只产出 answer；前端 AnalysisView 仍读顶层 sql/result/chart_config。
+    # 从最后一个成功的 sql observation 提升，避免表/图丢失。
+    final_payload: dict[str, Any] = {
         "routed_tool": routed_tool,
         "trace": trace.to_dict(),
         "tool_results": [r.to_dict() for r in results],
         "answer": answer,
         "synthesized": True,
     }
+    for r in reversed(successes):
+        if r.tool != "sql":
+            continue
+        obs = r.observation or {}
+        if obs.get("sql"):
+            final_payload["sql"] = obs["sql"]
+        if obs.get("result") is not None:
+            final_payload["result"] = obs["result"]
+        if obs.get("chart_config") is not None:
+            final_payload["chart_config"] = obs["chart_config"]
+        break
+
+    yield "trace", trace.to_dict()
+    yield "result", final_payload

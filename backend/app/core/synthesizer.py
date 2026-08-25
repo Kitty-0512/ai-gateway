@@ -20,7 +20,7 @@ from app.core.tools.registry import ToolResult
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM = "你是企业智能分析助手，负责综合多个分析工具的结果，输出清晰、有业务价值的结论。"
+_SYSTEM = "你是 Data Agent 经营分析助手，负责综合多个分析工具的结果，输出清晰、有业务价值的结论。"
 
 _TOOL_LABEL = {"sql": "业务数据分析", "log": "运维日志诊断", "mcp": "数据/文件工具"}
 

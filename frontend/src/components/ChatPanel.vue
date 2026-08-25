@@ -427,8 +427,8 @@ function setMsgRef(el, idx) {
     <div ref="chatEl" class="chat-body">
       <div v-if="!store.currentSession" class="no-session">
         <el-icon :size="48"><ChatLineSquare /></el-icon>
-        <h3>企业智能分析与运维诊断平台</h3>
-        <p>新建一个会话，开始数据分析或日志诊断</p>
+        <h3>Data Agent 智能问数与经营分析</h3>
+        <p>新建一个会话，开始问数分析或日志诊断</p>
       </div>
       <el-alert
         v-else-if="currentMode === 'sql' && !hasSqlDataset"

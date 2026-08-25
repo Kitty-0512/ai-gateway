@@ -17,8 +17,8 @@ const statCards = [
   <div class="dashboard">
     <div class="dashboard-header">
       <div>
-        <h1 class="dashboard-title">AI 分析控制台</h1>
-        <p class="dashboard-subtitle">统一的数据分析与运维诊断工作空间</p>
+        <h1 class="dashboard-title">Data Agent 控制台</h1>
+        <p class="dashboard-subtitle">面向业务人员的智能问数与经营分析</p>
       </div>
     </div>
 

@@ -102,9 +102,12 @@ def _find_existing_ids(db) -> list[int]:
     return [int(r[0]) for r in rows]
 
 
-def ensure_seo_builtin_datasets() -> list[int]:
+def ensure_seo_builtin_datasets(*, force_refresh: bool = False) -> list[int]:
     """
     确保内置 SEO 数据集已灌入 MySQL 并登记在 datasets 表。
+
+    Args:
+        force_refresh: True 时即使已登记也按当前 CSV/生成器重建表数据（保留 dataset id）。
 
     Returns:
         两个内置数据集的 dataset id 列表（traffic, keyword）
@@ -112,7 +115,7 @@ def ensure_seo_builtin_datasets() -> list[int]:
     db = get_db_sync()
     try:
         existing = _find_existing_ids(db)
-        if len(existing) >= len(BUILTIN_DATASETS):
+        if len(existing) >= len(BUILTIN_DATASETS) and not force_refresh:
             logger.info("内置 SEO 数据集已存在，dataset_ids=%s", existing)
             return existing[: len(BUILTIN_DATASETS)]
 
@@ -120,18 +123,42 @@ def ensure_seo_builtin_datasets() -> list[int]:
         ids: list[int] = []
 
         for spec in BUILTIN_DATASETS.values():
-            # 单表幂等：若已登记则跳过
+            df_key = spec["dataframe_key"]
+            df = frames.get(df_key)
+            if df is None:
+                df = _load_dataframe(df_key)
+
             row = db.execute(
                 text("SELECT id FROM datasets WHERE file_name = :fn AND status = 1 LIMIT 1"),
                 {"fn": spec["file_name"]},
             ).fetchone()
-            if row:
-                ids.append(int(row[0]))
-                continue
 
-            df_key = spec["dataframe_key"]
-            df = _load_dataframe(df_key)
             row_count = _create_and_fill_table(db, spec["table_name"], spec["schema"], df)
+
+            if row:
+                dataset_id = int(row[0])
+                db.execute(
+                    text(
+                        "UPDATE datasets SET row_count = :rc, file_path = :fp, "
+                        "schema_json = :sj WHERE id = :id"
+                    ),
+                    {
+                        "rc": row_count,
+                        "fp": str(_DATA_CSV_DIR / f"{df_key}.csv"),
+                        "sj": json.dumps(spec["schema"], ensure_ascii=False),
+                        "id": dataset_id,
+                    },
+                )
+                db.commit()
+                ids.append(dataset_id)
+                logger.info(
+                    "已刷新内置数据集 %s → table=%s rows=%d id=%s",
+                    spec["display_name"],
+                    spec["table_name"],
+                    row_count,
+                    dataset_id,
+                )
+                continue
 
             db.execute(
                 text("""

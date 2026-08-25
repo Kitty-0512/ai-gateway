@@ -1,6 +1,6 @@
-# 企业智能分析与运维诊断平台
+# Data Agent 智能问数与经营分析平台
 
-面向企业业务数据查询与应用运维排查的多工具智能分析平台：提供统一的自然语言分析入口，通过任务路由与一次性规划（Planner）进入 Text-to-SQL 与日志诊断流程，结合 MCP 工具调用、LLM 推理与 SSE 流式交互完成分析结果输出。
+面向业务人员的 Data Agent：以自然语言完成智能问数与经营分析，统一入口经任务路由与一次性规划（Planner）进入 Text-to-SQL 与（可选）日志诊断，结合 MCP、LLM 与 SSE 流式交互输出可解释结论。
 
 **在线访问**：[https://ai-gateway-1qp6.onrender.com](https://ai-gateway-1qp6.onrender.com)
 

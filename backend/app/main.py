@@ -1,5 +1,5 @@
 """
-企业智能分析与运维诊断平台。
+Data Agent 智能问数与经营分析平台。
 
 面向企业业务数据查询与应用运维排查的多工具智能分析平台。
 统一入口 → Router → 一次性 Planner → Tool Registry(SQL/Log) → 单工具直返/多工具 Synthesizer → SSE。
@@ -206,7 +206,7 @@ try:
     _mcp_enabled = True
     mcp = FastApiMCP(
         app,
-        name="企业智能分析与运维诊断平台 MCP Server",
+        name="Data Agent 智能问数与经营分析平台 MCP Server",
         description="Text-to-SQL 数据分析 + 日志诊断 统一网关",
         describe_all_responses=True,
         include_operations=[

@@ -638,8 +638,8 @@ const lastAssistantMsg = computed(() => {
               <path d="M5.64 5.64l2.83 2.83m7.07 7.07l2.83 2.83M5.64 18.36l2.83-2.83m7.07-7.07l2.83-2.83"/>
             </svg>
           </div>
-          <h2>AI 分析控制台</h2>
-          <p>统一的数据分析与运维诊断工作空间</p>
+          <h2>Data Agent 分析中心</h2>
+          <p>面向业务人员的智能问数与经营分析</p>
           <div class="empty-actions">
             <el-button type="primary" @click="showNewDialog = true">
               <el-icon><Plus /></el-icon>
@@ -702,9 +702,9 @@ const lastAssistantMsg = computed(() => {
                 </div>
               </div>
 
-              <!-- Content (for log diagnosis text) -->
-              <div v-if="msg.content && !msg.chartData?.length && !msg.chartConfig" class="content-card">
-                <div class="card-header">分析报告</div>
+              <!-- 核心结论：有 answer/content 即展示（不再因有表/图而隐藏） -->
+              <div v-if="msg.content" class="content-card">
+                <div class="card-header">核心结论</div>
                 <div class="card-body" v-html="formatContent(msg.content)" />
               </div>
 

@@ -26,7 +26,10 @@ const menuItems = [
             <path d="M5.64 5.64l2.83 2.83m7.07 7.07l2.83 2.83M5.64 18.36l2.83-2.83m7.07-7.07l2.83-2.83"/>
           </svg>
         </span>
-        <span class="brand-text">智能分析与运维诊断</span>
+        <div class="brand-copy">
+          <span class="brand-text">Data Agent</span>
+          <span class="brand-sub">智能问数与经营分析</span>
+        </div>
       </div>
 
       <el-menu
@@ -91,12 +94,26 @@ const menuItems = [
   align-items: center;
 }
 
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .brand-text {
   font-size: 15px;
   font-weight: 700;
   color: #1e293b;
   letter-spacing: -0.01em;
-  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.brand-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  line-height: 1.2;
 }
 
 .sidebar-menu {

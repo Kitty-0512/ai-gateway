@@ -51,7 +51,7 @@ class Settings(BaseSettings):
         )
 
     # ---- 应用 ----
-    app_name: str = "企业智能分析与运维诊断平台"
+    app_name: str = "Data Agent 智能问数与经营分析平台"
     api_prefix: str = "/api"
     cors_origins: str = "https://ai-gateway-1qp6.onrender.com,http://localhost:3000"
 

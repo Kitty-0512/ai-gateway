@@ -6,6 +6,7 @@ SEO 经营分析演示数据集生成器。
 - keyword_ranking: site, keyword, rank, date
 
 设计意图（供 Demo / Evaluation 使用）：
+- 日期为滚动最近 60 天（含今天），保证「最近 N 天」类问题能命中数据
 - Site A：近 30 天流量下降约 23%（自然搜索同步下滑）
 - Site B：近 30 天流量增长约 15%
 - Site C：近 30 天流量微降约 5%
@@ -19,8 +20,12 @@ from datetime import date, timedelta
 import pandas as pd
 
 SITES = ("Site A", "Site B", "Site C")
-START_DATE = date(2024, 6, 1)
 DAYS = 60
+
+
+def _start_date() -> date:
+    """滚动窗口：以今天为终点的最近 DAYS 天（含今天）。"""
+    return date.today() - timedelta(days=DAYS - 1)
 
 # 近 30 天相对前 30 天的 PV 变化率（用于构造「下降最多」类问题）
 SITE_PV_TREND = {
@@ -47,7 +52,8 @@ SITE_A_DECLINING_KEYWORDS = KEYWORD_POOL[:15]
 
 
 def _date_range() -> list[date]:
-    return [START_DATE + timedelta(days=i) for i in range(DAYS)]
+    start = _start_date()
+    return [start + timedelta(days=i) for i in range(DAYS)]
 
 
 def _lerp(start: float, end: float, t: float) -> int:
