@@ -56,6 +56,8 @@ def extract_columns_from_sql(sql: str) -> List[str]:
         "GREATEST", "LEAST", "ABS", "FLOOR", "CEIL", "POWER", "MOD",
         "CONCAT", "SUBSTRING", "TRIM", "UPPER", "LOWER", "LENGTH",
         "REPLACE", "LOCATE", "INSTR",
+         "LAG", "LEAD", "OVER", "PARTITION", "RANK", "DENSE_RANK",
+        "ROW_NUMBER", "FIRST_VALUE", "LAST_VALUE",
     }
 
     # 移除字符串字面量中的内容，避免误匹配

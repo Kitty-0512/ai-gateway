@@ -101,6 +101,16 @@ async def lifespan(app: FastAPI):
             db.commit()
             db.close()
             logger.info("  元数据表: ✅ 已就绪 (datasets, conversations, messages)")
+
+            # 内置 SEO 演示数据集（Site 流量 + 关键词排名）
+            try:
+                from app.services.sql.seed_seo_data import ensure_seo_builtin_datasets
+
+                seo_ids = ensure_seo_builtin_datasets()
+                if seo_ids:
+                    logger.info("  内置 SEO 数据集: ✅ dataset_ids=%s", seo_ids)
+            except Exception as seed_exc:
+                logger.warning("  内置 SEO 数据集: ⚠️ %s", seed_exc)
         except Exception as e:
             logger.warning("  元数据表: ⚠️ 建表失败 — %s", e)
 

@@ -22,6 +22,14 @@ export async function unifiedChat(payload) {
   return res.json()
 }
 
+export async function fetchDefaultDatasets() {
+  const res = await fetch(`${API_BASE}/sql/default-datasets`)
+  if (!res.ok) {
+    throw new Error(await _parseError(res))
+  }
+  return res.json()
+}
+
 export async function uploadSqlFile(file) {
   const formData = new FormData()
   formData.append('file', file)

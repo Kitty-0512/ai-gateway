@@ -33,6 +33,7 @@ from app.services.sql.sql_validator import verify_columns_exist, build_table_sch
 from app.services.sql.sql_executor_utils import build_pre_calculated_block
 from app.core.llm_client import call_llm, call_llm_stream
 from app.services.sql.schema_controller import build_schema_for_prompt
+from app.services.sql.semantic_layer import build_semantic_context
 
 logger = logging.getLogger(__name__)
 
@@ -672,6 +673,9 @@ def generate_and_execute_stream(request: QueryRequest):
         history_context=history_context,
         user_question=request.question,
     )
+    semantic_block = build_semantic_context(request.question, table_info)
+    if semantic_block:
+        text_to_sql_prompt = semantic_block + "\n\n" + text_to_sql_prompt
 
     llm_messages = [
         SystemMessage(content="你是一个专业的 SQL 数据分析助手。严格遵循用户指令输出。"),

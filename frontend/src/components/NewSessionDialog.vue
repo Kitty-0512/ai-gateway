@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { uploadSqlFile } from '@/api/client'
+import { uploadSqlFile, fetchDefaultDatasets } from '@/api/client'
 
 const emit = defineEmits(['start'])
 const visible = defineModel('visible', { type: Boolean, default: false })
@@ -12,6 +12,8 @@ const file = ref(null)
 const fileText = ref('')
 const dragging = ref(false)
 const submitting = ref(false)
+const useBuiltinSeo = ref(false)
+const builtinInfo = ref(null)
 
 const acceptExtensions = computed(() =>
   tool.value === 'sql' ? '.xlsx,.xls,.csv' : '.log,.txt,.out'
@@ -66,6 +68,8 @@ function resetForm() {
   text.value = ''
   file.value = null
   fileText.value = ''
+  useBuiltinSeo.value = false
+  builtinInfo.value = null
   visible.value = false
 }
 
@@ -74,6 +78,8 @@ function changeTool(nextTool) {
   file.value = null
   fileText.value = ''
   text.value = ''
+  useBuiltinSeo.value = false
+  builtinInfo.value = null
 }
 
 async function handleStart() {
@@ -82,8 +88,35 @@ async function handleStart() {
 
   try {
     if (tool.value === 'sql') {
+      if (useBuiltinSeo.value) {
+        const result = await fetchDefaultDatasets()
+        builtinInfo.value = result
+        const names = (result.datasets || []).map((d) => d.display_name).join('、')
+        emit('start', {
+          tool: 'sql',
+          meta: {
+            fileName: '内置 SEO 演示数据集',
+            selectedMode: 'sql',
+            datasetIds: result.dataset_ids || [],
+            datasetInfo: result,
+            builtinSeo: true,
+          },
+          welcomeMessage:
+            `已加载内置 SEO 经营分析数据集（${names}）\n`
+            + `共 ${(result.datasets || []).reduce((s, d) => s + (d.row_count || 0), 0)} 行数据\n\n`
+            + `推荐问题：\n`
+            + `• 最近30天哪个网站流量下降最多？\n`
+            + `• Site A 最近30天 PV 和 UV 是多少？\n`
+            + `• 为什么 Site A 最近流量下降？\n`
+            + `• Site A 哪些关键词排名下降超过3位？`,
+        })
+        ElMessage.success('已加载内置 SEO 数据集')
+        resetForm()
+        return
+      }
+
       if (!file.value) {
-        ElMessage.warning('请先上传数据文件')
+        ElMessage.warning('请上传数据文件，或选择内置 SEO 演示数据集')
         return
       }
 
@@ -147,9 +180,16 @@ async function handleStart() {
   }
 }
 
-const canStart = computed(() =>
-  tool.value === 'sql' ? !!file.value : !!text.value.trim() || !!(file.value && fileText.value)
-)
+const canStart = computed(() => {
+  if (tool.value === 'sql') return !!file.value || useBuiltinSeo.value
+  return !!text.value.trim() || !!(file.value && fileText.value)
+})
+
+function selectBuiltinSeo() {
+  useBuiltinSeo.value = true
+  file.value = null
+  fileText.value = ''
+}
 </script>
 
 <template>
@@ -225,11 +265,23 @@ const canStart = computed(() =>
     </div>
     <div v-else class="sql-tip">
       <el-alert
-        title="文件上传后将解析为数据集表，随后可用自然语言查询分析。"
+        title="上传 CSV/Excel，或使用内置 SEO 演示数据（3 站点 × 60 天流量 + 关键词排名）。"
         type="info"
         :closable="false"
         show-icon
       />
+      <div class="builtin-row">
+        <el-button
+          type="primary"
+          plain
+          size="small"
+          :class="{ active: useBuiltinSeo }"
+          @click="selectBuiltinSeo"
+        >
+          使用内置 SEO 演示数据集
+        </el-button>
+        <span v-if="useBuiltinSeo" class="builtin-hint">已选择：站点流量 + 关键词排名（无需上传文件）</span>
+      </div>
     </div>
 
     <template #footer>
@@ -323,4 +375,16 @@ const canStart = computed(() =>
 
 .text-area { margin-top: 4px; }
 .sql-tip { margin-top: 4px; }
+.builtin-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.builtin-row .active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+.builtin-hint { font-size: 12px; color: #059669; }
 </style>

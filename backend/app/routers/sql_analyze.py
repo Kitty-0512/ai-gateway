@@ -187,6 +187,54 @@ async def upload_file(file: UploadFile = File(...)):
         cleanup_session(upload_sid)
 
 
+@router.get("/default-datasets")
+async def get_default_datasets():
+    """
+    返回内置 SEO 演示数据集 ID（站点流量 + 关键词排名）。
+    若尚未灌库则尝试触发一次 ensure。
+    """
+    from app.services.sql.seed_seo_data import (
+        BUILTIN_DATASETS,
+        ensure_seo_builtin_datasets,
+        get_default_dataset_ids,
+    )
+
+    ids = get_default_dataset_ids()
+    if len(ids) < len(BUILTIN_DATASETS):
+        ids = ensure_seo_builtin_datasets()
+    if not ids:
+        raise HTTPException(
+            status_code=503,
+            detail="内置 SEO 数据集不可用，请检查 MySQL 连接或稍后重试",
+        )
+
+    meta = []
+    db = get_db_sync()
+    try:
+        for did in ids:
+            row = db.execute(
+                text("SELECT id, file_name, table_name, row_count FROM datasets WHERE id = :id"),
+                {"id": did},
+            ).fetchone()
+            if row:
+                m = dict(row._mapping)
+                spec_key = next(
+                    (k for k, v in BUILTIN_DATASETS.items() if v["file_name"] == m["file_name"]),
+                    None,
+                )
+                display = BUILTIN_DATASETS.get(spec_key or "", {}).get("display_name", m["file_name"])
+                meta.append({
+                    "dataset_id": m["id"],
+                    "table_name": m["table_name"],
+                    "row_count": m["row_count"],
+                    "display_name": display,
+                })
+    finally:
+        db.close()
+
+    return {"dataset_ids": ids, "datasets": meta}
+
+
 @router.get("/health")
 async def health_check():
     """SQL 分析服务健康检查。"""

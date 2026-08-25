@@ -1,0 +1,95 @@
+# 指标语义层 — SEO 网站经营分析场景
+# 用于将用户自然语言映射到标准指标与 SQL 生成约束
+
+metrics:
+  pv:
+    label: 页面浏览量
+    column: pv
+    table: ds_seo_site_traffic_daily
+    description: 页面被访问的总次数
+
+  uv:
+    label: 独立访客数
+    column: uv
+    table: ds_seo_site_traffic_daily
+    description: 去重后的访客数量
+
+  organic_traffic:
+    label: 自然搜索流量
+    column: organic_traffic
+    table: ds_seo_site_traffic_daily
+    description: 来自搜索引擎的自然流量（非付费）
+
+  keyword_rank:
+    label: 关键词排名
+    column: rank
+    table: ds_seo_keyword_ranking
+    description: 关键词在搜索结果中的排名，数值越小越好
+
+  traffic_change_rate:
+    label: 流量变化率
+    formula: "(本期流量 - 上期流量) / 上期流量"
+    description: 环比变化率，用于「增长/下降最多」类问题
+
+# 用户说法 → 标准指标
+aliases:
+  流量: pv
+  网站流量: pv
+  访问量: pv
+  浏览量: pv
+  访客: uv
+  独立访客: uv
+  访客数: uv
+  SEO流量: organic_traffic
+  自然搜索: organic_traffic
+  自然搜索流量: organic_traffic
+  有机流量: organic_traffic
+  搜索流量: organic_traffic
+  排名: keyword_rank
+  关键词排名: keyword_rank
+  SEO表现: organic_traffic
+
+# 分析意图短语 → SQL 生成提示
+phrase_rules:
+  下降最多:
+    metric: traffic_change_rate
+    sort: asc
+    hint: 按近30天与前30天的流量变化率升序排列，变化率最小（最负）的站点为下降最多
+
+  增长最快:
+    metric: traffic_change_rate
+    sort: desc
+    hint: 按流量变化率降序排列，变化率最大的站点为增长最快
+
+  流量最高:
+    metric: pv
+    sort: desc
+    hint: 按 PV 降序排列
+
+  PV最高:
+    metric: pv
+    sort: desc
+    hint: 按 PV 降序排列
+
+  排名下降:
+    metric: keyword_rank
+    hint: 比较两个时间段的平均排名，排名数值增大表示下降；下降超过3位需计算 rank 差值
+
+  SEO表现最差:
+    metric: organic_traffic
+    hint: SEO 表现应优先看 organic_traffic，不要误用 PV 作为 SEO 指标
+
+  为什么流量下降:
+    metrics: [pv, uv, organic_traffic, keyword_rank]
+    hint: 需分别查看 PV、UV、自然搜索流量及核心关键词排名变化，综合诊断原因
+
+tables:
+  ds_seo_site_traffic_daily:
+    description: 各站点每日流量指标
+    grain: site + date
+    key_columns: [site, date, pv, uv, organic_traffic]
+
+  ds_seo_keyword_ranking:
+    description: 各站点关键词每日搜索排名
+    grain: site + keyword + date
+    key_columns: [site, keyword, rank, date]
