@@ -2,8 +2,9 @@
 
 面向业务人员的 Data Agent：用自然语言完成智能问数与经营分析。统一入口经意图路由与一次性规划（Planner）调度 Text-to-SQL / 日志诊断，结合 MCP、LLM 与 SSE 流式交互，输出可解释结论与执行轨迹。
 
-> 云端免费实例可能因额度暂停；推荐用本页截图 + 本地运行做演示。  
-> 历史在线地址（可能不可用）：[https://ai-gateway-1qp6.onrender.com](https://ai-gateway-1qp6.onrender.com)
+**在线访问**：[https://ai-gateway-production-74c4.up.railway.app](https://ai-gateway-production-74c4.up.railway.app)
+
+> Railway 试用额度用完后服务可能暂停；不可用时请用本页截图 + 本地运行演示。
 
 **技术栈**：FastAPI · LangChain · MCP SDK · Vue 3 · Element Plus · ECharts · MySQL
 

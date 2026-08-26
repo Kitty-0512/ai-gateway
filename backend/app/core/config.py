@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     # ---- 应用 ----
     app_name: str = "Data Agent 智能问数与经营分析平台"
     api_prefix: str = "/api"
-    cors_origins: str = "https://ai-gateway-1qp6.onrender.com,http://localhost:3000"
+    cors_origins: str = "https://ai-gateway-production-74c4.up.railway.app,http://localhost:3000"
 
     # ---- DeepSeek / OpenAI 兼容接口 ----
     openai_api_key: str = ""
@@ -86,7 +86,7 @@ class Settings(BaseSettings):
     mcp_server_env: str = ""
     mcp_connect_timeout: float = 30.0
     mcp_call_timeout: float = 30.0
-    mcp_base_url: str = "https://ai-gateway-1qp6.onrender.com"
+    mcp_base_url: str = "https://ai-gateway-production-74c4.up.railway.app"
     # 是否把 MCP 辅助工具（mysql_query / describe_table / read_file）注册进编排层
     # 默认关闭：核心是 SQL/Log 两个工具，MCP 为可选辅助（见 tools/mcp_tool.py）
     mcp_tools_enabled: bool = False
