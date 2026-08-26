@@ -1,20 +1,22 @@
-# 主 Demo 截图（阶段 3 交付）
+# Data Agent 功能截图索引
 
-请在本机浏览器完成（Agent 无法代替你点分析页截图）。
+本地演示：后端 `http://127.0.0.1:8000`，前端 `http://localhost:3000`。
 
-1. 打开 http://localhost:3000/analysis  
-2. 新建会话，勾选 **SEO 内置数据集**  
-3. 提问：**最近30天SEO流量为什么下降？**  
-4. 确认「**核心结论**」卡片在数据表 / 图表 **上方**  
-5. 按下面文件名保存到本目录：
+| 文件 | 功能 | 说明 |
+|------|------|------|
+| `07-dashboard.png` | 数据概览 | 控制台统计与快捷入口 |
+| `08-analysis-home.png` | 分析中心 | 空状态 / 会话工作区 |
+| `08b-analysis-new-session.png` | 新建会话 | 数据分析 + 内置 SEO 数据集 |
+| `01-question.png` | 主 Demo | 提问「最近30天SEO流量为什么下降？」 |
+| `02-flow.png` | 主 Demo | Router / Planner 执行轨迹 |
+| `03-sql.png` | 主 Demo | 生成的 SQL |
+| `04-table.png` | 主 Demo | 数据表结果 |
+| `05-chart.png` | 主 Demo | 图表 Tab |
+| `06-conclusion.png` | 主 Demo | 核心结论（含部分失败说明） |
+| `09-sql-workspace-input.png` | SQL 工作台 | 编辑器与示例查询 |
+| `09b-sql-workspace-result.png` | SQL 工作台 | 结果区（需绑定数据集才有行） |
+| `10-log-diagnosis-input.png` | 日志诊断 | 粘贴日志 |
+| `10b-log-diagnosis-result.png` | 日志诊断 | 结构化诊断报告 |
+| `11-app-shell.png` | 应用壳层 | 侧栏品牌与导航 |
 
-| 文件 | 拍什么 |
-|------|--------|
-| `01-question.png` | 输入的问题 |
-| `02-flow.png` | 分析流程（Router / Planner / 2 步 / 最终结果） |
-| `03-sql.png` | 生成的 SQL |
-| `04-table.png` | 数据表（应有行） |
-| `05-chart.png` | 图表 Tab |
-| `06-conclusion.png` | 「核心结论」全文可见 |
-
-若结论仍不在表图上方，核对 `AnalysisView.vue` 是否已是「有 content 就渲染核心结论」。
+批量补拍脚本：`_capture_features.mjs`（需前端已 `npm i -D playwright` 且 Chromium 已安装）。

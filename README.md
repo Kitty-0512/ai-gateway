@@ -1,41 +1,108 @@
 # Data Agent 智能问数与经营分析平台
 
-面向业务人员的 Data Agent：以自然语言完成智能问数与经营分析，统一入口经任务路由与一次性规划（Planner）进入 Text-to-SQL 与（可选）日志诊断，结合 MCP、LLM 与 SSE 流式交互输出可解释结论。
+面向业务人员的 Data Agent：用自然语言完成智能问数与经营分析。统一入口经意图路由与一次性规划（Planner）调度 Text-to-SQL / 日志诊断，结合 MCP、LLM 与 SSE 流式交互，输出可解释结论与执行轨迹。
 
-**在线访问**：[https://ai-gateway-1qp6.onrender.com](https://ai-gateway-1qp6.onrender.com)
+> 云端免费实例可能因额度暂停；推荐用本页截图 + 本地运行做演示。  
+> 历史在线地址（可能不可用）：[https://ai-gateway-1qp6.onrender.com](https://ai-gateway-1qp6.onrender.com)
 
 **技术栈**：FastAPI · LangChain · MCP SDK · Vue 3 · Element Plus · ECharts · MySQL
 
 ---
 
-## 功能概览
+## 界面演示（全功能）
 
-### 数据概览
-首页仪表盘，展示分析任务、查询记录、诊断报告、数据集等统计信息，以及最近任务和快捷操作入口。
+侧边栏四个入口：**数据概览 → 分析中心 → SQL 工作台 → 日志诊断**。
 
-### 分析中心
-自然语言数据分析（Text-to-SQL）核心工作区，Pipeline 风格展示完整分析链路：
+### 1. 数据概览（控制台）
 
-```
-用户请求 → 分析流程 → 生成 SQL → 分析结果（数据表 / 图表 / SQL）
-```
+首页统计分析任务 / 查询记录 / 诊断报告 / 数据集，并提供「新建分析」「日志诊断」「SQL 工作台」快捷入口。
 
-- 上传 Excel / CSV 数据集，自然语言提问自动生成并执行 SQL
-- SSE 流式推送每一步执行状态，前端实时展示
-- 结果区 Tab 切换：数据表、图表、SQL 三视图
-- 支持图表 PNG 导出、数据表 PDF 导出、截图保存
+![07 数据概览](docs/screenshots/07-dashboard.png)
 
-### SQL 工作台
-独立 SQL 编辑器，可直接编写和执行查询语句，查看结果表格与图表。
+### 2. 分析中心（空状态）
 
-### 日志诊断
-运维日志智能诊断，上传日志文件或粘贴内容后自动分析：
+会话列表 + 主工作区。新建会话后可选择「数据分析」或「日志诊断」。
 
-- 异常类型识别
-- 关键证据提取
-- 根因分析
-- 处理建议
-- 风险等级与严重度评分
+![08 分析中心](docs/screenshots/08-analysis-home.png)
+
+### 3. 新建会话：上传数据或内置 SEO 数据集
+
+数据分析模式支持上传 Excel / CSV，或一键加载**内置 SEO 演示数据集**（多站点 × 约 60 天流量 + 关键词排名），无需自备文件即可演示经营问数。
+
+![08b 新建会话](docs/screenshots/08b-analysis-new-session.png)
+
+### 4. 主 Demo：自然语言问数「最近30天SEO流量为什么下降？」
+
+完整链路：提问 → Router / Planner 多步规划 → 生成 SQL → 数据表 / 图表 → **核心结论**（含部分失败步骤的诚实说明）。
+
+**4.1 输入问题**
+
+![01 提问](docs/screenshots/01-question.png)
+
+**4.2 分析流程（执行轨迹）**
+
+SSE 流式展示意图路由、一次性规划、工具步骤与耗时。
+
+![02 分析流程](docs/screenshots/02-flow.png)
+
+**4.3 生成 SQL**
+
+![03 生成 SQL](docs/screenshots/03-sql.png)
+
+**4.4 数据表结果**
+
+![04 数据表](docs/screenshots/04-table.png)
+
+**4.5 图表可视化**
+
+![05 图表](docs/screenshots/05-chart.png)
+
+**4.6 核心结论（经营解读）**
+
+结论卡片置于表/图上方，综合多步结果给出业务判断，并对缺字段等失败步骤给出边界说明。
+
+![06 核心结论](docs/screenshots/06-conclusion.png)
+
+### 5. SQL 工作台
+
+独立 SQL 编辑器：编写 / 格式化 / 复制 / 执行查询，结果区支持表格与导出。适合已熟悉表结构时的直接探查（自然语言问数仍推荐走「分析中心」）。
+
+![09 SQL 输入](docs/screenshots/09-sql-workspace-input.png)
+
+![09b SQL 结果区](docs/screenshots/09b-sql-workspace-result.png)
+
+### 6. 日志诊断
+
+上传 `.log` / `.txt` / `.out`，或直接粘贴错误日志；自动输出风险等级、严重度、异常类型、根因、关键证据与排查建议（LLM 结构化诊断）。
+
+**6.1 粘贴日志并开始诊断**
+
+![10 日志输入](docs/screenshots/10-log-diagnosis-input.png)
+
+**6.2 诊断报告**
+
+![10b 诊断报告](docs/screenshots/10b-log-diagnosis-result.png)
+
+### 7. 应用壳层（品牌与导航）
+
+全局侧栏品牌 **Data Agent / 智能问数与经营分析**，四模块导航与系统状态。
+
+![11 应用壳层](docs/screenshots/11-app-shell.png)
+
+截图索引见 [`docs/screenshots/README.md`](docs/screenshots/README.md)。
+
+---
+
+## 功能实现说明
+
+| 功能 | 怎么用 | 实现要点 |
+|------|--------|----------|
+| 数据概览 | 首页查看统计与快捷入口 | `DashboardView` + Pinia 会话统计 |
+| 分析中心问数 | 新建会话 → 上传 CSV/Excel 或内置 SEO → 自然语言提问 | Text-to-SQL + SSE Pipeline；结果 Tab：表 / 图 / SQL；可导出 |
+| 执行轨迹 | 分析过程中右侧/流程区查看 | Router → Planner(≤3 步) → Tool →（多工具）Synthesizer |
+| SQL 工作台 | 直接编写并执行 SQL | `SQLWorkspaceView` 经统一 chat 入口执行 |
+| 日志诊断 | 上传或粘贴日志 → 开始诊断 | 解析 / 脱敏 / 严重度 / 根因报告；支持追问 |
+| 内置 SEO 数据 | 新建会话勾选内置数据集 | 种子表 `ds_seo_site_traffic_daily` 等，滚动约 60 天 |
 
 ---
 
@@ -50,7 +117,7 @@ Intent Router（意图初判）
    ↓
 One-shot Planner（一次性规划，≤3 步）
    ↓
-Tool Registry ── SQL Tool / Log Tool（MCP Tool 为可选辅助，延后）
+Tool Registry ── SQL Tool / Log Tool（MCP 可选辅助）
    ↓
 Tool Observations
    ↓
@@ -63,26 +130,21 @@ Vue 分析控制台
 
 ### 技术特性
 
-- **统一 SSE 入口** `POST /api/chat/stream`：Router 意图初判 → Planner 一次性规划 → Tool Registry 执行 → 单工具直返 / 多工具综合，全程 SSE 流式（事件：`routing / plan / stage / sql / tool_done / delta / trace / result / error`）
-- **一次性 Planner（非 ReAct）**：只规划一次，最多 3 步，`needs_synthesis` 由 `len(steps) > 1` 代码推导；解析失败自动 fallback 到 Router 单工具，绝不退化为无限决策循环
-- **Tool Registry 解耦**：业务层（Planner）只认识工具名，执行层（`sql_generator` / `diagnoser` / `mcp_client`）被薄包装为可注册工具，原有 pipeline 完全复用
-- **两层容错互不叠加**：SQL 逻辑错由底层 `execute_sql_with_repair` 自愈（≤3 次）；编排层外层 retry 仅对基础设施类失败生效（≤2 次）。多工具允许部分成功（如 SQL ✓ / Log ✗）
-- **MCP 双向协议**：既作为 MCP Client 编排 MySQL / Filesystem / Fetch 工具，也通过 `fastapi_mcp` 对外暴露标准工具
-- **可观测执行轨迹**：轻量 Trace（routing / plan / tool_calls / synthesis）随 SSE 下发，前端时间线面板展示每一步工具状态与耗时
+- **统一 SSE 入口** `POST /api/chat/stream`：事件含 `routing / plan / stage / sql / tool_done / delta / trace / result / error`
+- **一次性 Planner（非 ReAct）**：最多 3 步；解析失败 fallback 到 Router 单工具，不无限循环
+- **Tool Registry 解耦**：业务层只认工具名，执行层复用既有 SQL / Log pipeline
+- **两层容错**：SQL 逻辑错由底层自愈（≤3 次）；编排层仅对基础设施失败重试（≤2 次）；多工具允许部分成功
+- **可观测 Trace**：前端时间线展示每步工具状态与耗时
 
-### 能力边界（刻意约束，避免过度设计）
+### 能力边界（刻意约束）
 
-| 已有能力（复用） | 本次实现（编排层） | 明确不做 |
+| 已有能力 | 本次编排层 | 明确不做 |
 |---|---|---|
-| Text-to-SQL | Unified SSE Entry | Multi-Agent / ReAct Loop |
-| SQL 自我纠错 | Intent Router | 无限 Planner |
-| 日志诊断 | One-shot Planner | Model Router / Provider Fallback |
-| 日志解析/脱敏 | Tool Registry | Rate Limit / Token Billing |
-| MCP Client | SQL Tool / Log Tool | OpenTelemetry |
-| Vue 控制台 | 条件式 Synthesizer | Prometheus / Grafana |
-| ExecutionTrace | 轻量 Trace + 统一 SSE | 可选 MCP Tool（辅助，延后） |
+| Text-to-SQL / SQL 自愈 | Unified SSE + Router + Planner | Multi-Agent / ReAct Loop |
+| 日志诊断 / 脱敏评分 | Tool Registry + Synthesizer | 无限 Planner / Model Router |
+| MCP Client / Vue 控制台 | 轻量 Trace | Token Billing / 完整 OTel |
 
-> 定位为「多工具统一智能分析平台」，而非模型网关（Model Gateway / LiteLLM）。
+> 定位为「多工具统一智能分析平台」，而非模型网关（LiteLLM 类）。
 
 ---
 
@@ -92,37 +154,16 @@ Vue 分析控制台
 ai-gateway/
 ├── backend/                     FastAPI 后端
 │   ├── app/
-│   │   ├── main.py              应用入口、统一 /api/chat 与 /api/chat/stream、MCP Server 暴露
-│   │   ├── core/                配置、路由决策、LLM 与 MCP 客户端、沙箱、SSE 工具
-│   │   │   ├── orchestrator.py  编排主流程（Router→Planner→Tools→Synthesizer→SSE）
-│   │   │   ├── planner.py       一次性任务规划（≤3 步，失败 fallback）
-│   │   │   ├── synthesizer.py   多工具结果综合（仅多工具场景调用）
-│   │   │   ├── trace.py         轻量执行追踪 TraceCollector
-│   │   │   └── tools/           Tool Registry + SQL/Log 工具封装
-│   │   ├── models/              Pydantic / SQLAlchemy 数据模型
-│   │   ├── routers/             sql_analyze、log_diagnose 子路由
-│   │   └── services/
-│   │       ├── sql/             SQL 生成、校验、重试、权限、Schema 管理
-│   │       └── log/             日志解析、脱敏、严重性评分、诊断、报告
-│   ├── demo/                    示例日志与数据文件
-│   ├── requirements.txt
+│   │   ├── main.py              统一 /api/chat 与 /api/chat/stream、MCP 暴露
+│   │   ├── core/                编排：orchestrator / planner / synthesizer / trace / tools
+│   │   ├── services/sql/        SQL 生成、校验、重试、SEO 种子数据
+│   │   └── services/log/        日志解析、脱敏、诊断报告
+│   ├── demo/                    示例日志与数据
 │   └── .env.example
 └── frontend/                    Vue 3 前端
-    ├── src/
-    │   ├── api/client.js        统一 API 客户端（含 SSE 流式解析）
-    │   ├── components/
-    │   │   ├── AppLayout.vue    全局侧边导航布局
-    │   │   ├── ExecutionTrace.vue  执行过程时间线面板
-    │   │   └── NewSessionDialog.vue 新建会话对话框
-    │   ├── views/
-    │   │   ├── DashboardView.vue     数据概览
-    │   │   ├── AnalysisView.vue      分析中心（Pipeline 风格）
-    │   │   ├── SQLWorkspaceView.vue  SQL 工作台
-    │   │   └── LogDiagnosisView.vue  日志诊断
-    │   ├── store/sessions.js    Pinia 会话状态
-    │   └── styles/main.css      全局样式
-    ├── package.json
-    └── vite.config.js
+    ├── src/views/               数据概览 / 分析中心 / SQL 工作台 / 日志诊断
+    ├── src/components/          AppLayout、ExecutionTrace、NewSessionDialog
+    └── vite.config.js           开发代理 /api → http://127.0.0.1:8000
 ```
 
 ---
@@ -133,7 +174,7 @@ ai-gateway/
 
 - Python 3.10+
 - Node.js 18+
-- MySQL 8.0（可选，仅 SQL 分析模式需要；日志诊断模式无需数据库）
+- MySQL 8.0（SQL 问数需要；纯日志诊断可不配库）
 
 ### 后端
 
@@ -147,12 +188,11 @@ venv\Scripts\activate
 source venv/bin/activate
 
 pip install -r requirements.txt
-
-cp .env.example .env    # 填入 API Key
-uvicorn app.main:app --reload --port 8001
+cp .env.example .env    # 填入 API Key 与 MySQL（如需）
+uvicorn app.main:app --reload --port 8000
 ```
 
-后端启动在 `http://127.0.0.1:8001`，API 文档见 `http://127.0.0.1:8001/docs`。
+API 文档：`http://127.0.0.1:8000/docs`
 
 ### 前端
 
@@ -162,52 +202,42 @@ npm install
 npm run dev
 ```
 
-前端启动在 `http://localhost:3000`，Vite 代理将 `/api` 请求转发到线上 Render 服务，无需本地后端。
+前端：`http://localhost:3000`。开发代理将 `/api` 转到 `http://127.0.0.1:8000`（见 `vite.config.js`）。
 
-> 如需本地后端，将 `frontend/vite.config.js` 中 `proxy.target` 改回 `http://127.0.0.1:8001`。
-
-### 环境变量
-
-复制 `backend/.env.example` 为 `backend/.env` 并填写：
+### 环境变量（`backend/.env`）
 
 | 变量 | 说明 | 必填 |
 |---|---|---|
-| `OPENAI_API_KEY` | DeepSeek 或任意 OpenAI 兼容接口的 Key | 是 |
-| `OPENAI_BASE_URL` | 接口地址，默认 `https://api.deepseek.com/v1` | 是 |
-| `OPENAI_MODEL` | 模型名，默认 `deepseek-chat` | 是 |
-| `MYSQL_*` | 数据库连接信息，仅 SQL 分析模式需要 | 否 |
-| `MYSQL_SSL_ENABLED` | 连接托管数据库（强制 TLS）时设为 `true` | 否 |
-| `CORS_ORIGINS` | 允许的前端来源，逗号分隔 | 是 |
-| `LLM_FALLBACK_MOCK` | LLM 不可用时是否回退到规则模板 | 否 |
-| `STATIC_DIR` | 前端构建产物目录，存在时由后端一并托管 | 否 |
+| `OPENAI_API_KEY` | DeepSeek 或 OpenAI 兼容 Key | 是 |
+| `OPENAI_BASE_URL` | 默认 `https://api.deepseek.com/v1` | 是 |
+| `OPENAI_MODEL` | 默认 `deepseek-chat` | 是 |
+| `MYSQL_*` | 数据库连接（SQL 模式） | 否 |
+| `MYSQL_SSL_ENABLED` | 托管库强制 TLS 时设 `true` | 否 |
+| `CORS_ORIGINS` | 允许的前端来源 | 是 |
+| `LLM_FALLBACK_MOCK` | LLM 不可用时规则模板回退 | 否 |
 
 ---
 
 ## 部署
 
-项目采用**单服务部署**：Docker 多阶段构建，先用 Node 构建前端，再把产物拷进 Python 镜像的 `static/` 目录，由 FastAPI 一并托管。前后端同源，无需处理 CORS，SSE 流式输出不会被反向代理缓冲。
+单服务 Docker：多阶段构建前端进 `static/`，由 FastAPI 同源托管（利于 SSE）。
 
 ```bash
 docker build -t ai-gateway .
 docker run -p 7860:7860 -e OPENAI_API_KEY=sk-xxx ai-gateway
 ```
 
-打开 `http://localhost:7860` 即可。
+SQL 模式可用 [TiDB Cloud](https://tidbcloud.com/) 等免费 MySQL 兼容库，并设置 `MYSQL_SSL_ENABLED=true`。
 
-### 数据库（仅 SQL 分析模式需要）
+---
 
-日志诊断模式不依赖数据库，可以直接上线。SQL 分析模式需要 MySQL 兼容数据库，[TiDB Cloud](https://tidbcloud.com/) 提供免费额度。创建集群后配置：
+## 评测与失败案例
 
-```
-MYSQL_HOST=gateway01.<region>.prod.aws.tidbcloud.com
-MYSQL_PORT=4000
-MYSQL_USER=<前缀>.root
-MYSQL_PASSWORD=<密码>
-MYSQL_DATABASE=ai_analyzer
-MYSQL_SSL_ENABLED=true
-```
+产品迭代中保留了部分已知失败（如校验器误伤 SQL 函数、跨表关键词、拒答边界），详见：
 
-TiDB Cloud 强制 TLS 连接，`MYSQL_SSL_ENABLED=true` 必须设置。
+- [`eval/evaluation_results.md`](eval/evaluation_results.md)
+- [`eval/metrics_summary.md`](eval/metrics_summary.md)
+- [`docs/failure_cases.md`](docs/failure_cases.md)
 
 ---
 
