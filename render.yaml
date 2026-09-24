@@ -1,0 +1,58 @@
+services:
+  - type: web
+    name: ai-gateway
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore
+    branch: main
+    healthCheckPath: /api/health/live
+    envVars:
+      # ---- 应用 ----
+      - key: APP_NAME
+        value: Data Agent 智能问数与经营分析平台
+      - key: API_PREFIX
+        value: /api
+      # 单服务同源托管，前端由后端提供，无需跨域白名单
+      - key: CORS_ORIGINS
+        value: http://localhost:3000
+      - key: STATIC_DIR
+        value: static
+
+      # ---- DeepSeek / OpenAI 兼容接口 ----
+      # 在 Render 控制台填入，不写进仓库
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_BASE_URL
+        value: https://api.deepseek.com/v1
+      - key: OPENAI_MODEL
+        value: deepseek-chat
+      - key: LLM_TIMEOUT_SECONDS
+        value: "60"
+      - key: LLM_MAX_TOKENS
+        value: "4096"
+      - key: LLM_TEMPERATURE
+        value: "0.1"
+      - key: LLM_FALLBACK_MOCK
+        value: "true"
+
+      # ---- MySQL（仅 SQL 问数需要，可留空只跑日志诊断）----
+      - key: MYSQL_HOST
+        sync: false
+      - key: MYSQL_PORT
+        value: "4000"
+      - key: MYSQL_USER
+        sync: false
+      - key: MYSQL_PASSWORD
+        sync: false
+      - key: MYSQL_DATABASE
+        sync: false
+      # TiDB Cloud / Aiven 等托管库强制 TLS
+      - key: MYSQL_SSL_ENABLED
+        value: "true"
+
+      # ---- 日志诊断 ----
+      - key: MAX_LOG_CHARS
+        value: "12000"
+      - key: MAX_UPLOAD_BYTES
+        value: "2097152"
