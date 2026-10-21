@@ -4,7 +4,7 @@
 
 **在线访问**：[https://ai-gateway-production-74c4.up.railway.app](https://ai-gateway-production-74c4.up.railway.app)
 
-> Railway 为试用额度，**请勿开保活 ping**；平时可在控制台暂停服务，面试前再启动。额度用完或暂停后请用本页截图 + 本地运行演示。
+
 
 **技术栈**：FastAPI · LangChain · MCP SDK · Vue 3 · Element Plus · ECharts · MySQL
 
